@@ -10,7 +10,7 @@ const ProjectMemberSchema = new Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'editor', 'viewer'],
+    enum: ['admin', 'editor', 'viewer',"member"],
     default: 'editor'
   },
   permissions: {
