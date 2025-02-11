@@ -72,3 +72,126 @@ export const getAllUsers = async (req, res) => {
     }
 };
 
+export const updatePreferences = async (req, res) => {
+    try {
+        const allowedPreferences = ['notifications', 'theme', 'language'];
+        const updates = Object.keys(req.body);
+        
+        // Validate update fields
+        const isValidOperation = updates.every(update => 
+            allowedPreferences.includes(update)
+        );
+
+        if (!isValidOperation) {
+            return res.status(400).json({ 
+                error: 'Invalid preferences update' 
+            });
+        }
+
+        // Update each preference
+        updates.forEach(update => {
+            req.user.preferences[update] = req.body[update];
+        });
+
+        await req.user.save();
+        res.json({ 
+            preferences: req.user.preferences,
+            message: 'Preferences updated successfully' 
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const manageInvites = async (req, res) => {
+    try {
+        const { inviteId, action, type } = req.body;
+
+        if (!['accept', 'reject'].includes(action)) {
+            return res.status(400).json({ 
+                error: 'Invalid action. Must be accept or reject' 
+            });
+        }
+
+        if (!['project', 'team'].includes(type)) {
+            return res.status(400).json({ 
+                error: 'Invalid invite type. Must be project or team' 
+            });
+        }
+
+        const inviteArrayName = `${type}Invites`;
+        const invite = req.user[inviteArrayName].id(inviteId);
+
+        if (!invite) {
+            return res.status(404).json({ 
+                error: 'Invite not found' 
+            });
+        }
+
+        invite.status = action === 'accept' ? 'accepted' : 'rejected';
+        await req.user.save();
+
+        // If accepted, update corresponding project/team
+        if (action === 'accept') {
+            const Model = mongoose.model(type.charAt(0).toUpperCase() + type.slice(1));
+            await Model.findByIdAndUpdate(
+                invite[type],
+                { 
+                    $push: { 
+                        members: {
+                            user: req.user._id,
+                            role: 'member',
+                            addedBy: invite.invitedBy
+                        }
+                    }
+                }
+            );
+        }
+
+        res.json({ 
+            message: `Invite ${action}ed successfully`,
+            updatedInvite: invite 
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const updateTimeSettings = async (req, res) => {
+    try {
+        const { timeZone, workingHours } = req.body;
+
+        // Validate time zone
+        if (timeZone && !Intl.DateTimeFormat().resolvedOptions().timeZones.includes(timeZone)) {
+            return res.status(400).json({ 
+                error: 'Invalid timezone' 
+            });
+        }
+
+        // Validate working hours format (HH:mm)
+        if (workingHours) {
+            const timeFormat = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (!timeFormat.test(workingHours.start) || !timeFormat.test(workingHours.end)) {
+                return res.status(400).json({ 
+                    error: 'Invalid time format. Use HH:mm format' 
+                });
+            }
+        }
+
+        // Update time settings
+        if (timeZone) req.user.timeZone = timeZone;
+        if (workingHours) req.user.workingHours = workingHours;
+
+        await req.user.save();
+        res.json({
+            timeSettings: {
+                timeZone: req.user.timeZone,
+                workingHours: req.user.workingHours
+            },
+            message: 'Time settings updated successfully'
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+

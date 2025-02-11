@@ -2,168 +2,242 @@
 
 Base URL: `http://localhost:3000/api`
 
-## 1. User Authentication Tests
+## 1. User Management Tests
 
-### 1.1 Register User (Admin)
+### 1.1 User Authentication
 ```json
-POST /users/register
-{
-    "name": "Admin User",
-    "email": "admin@example.com",
-    "password": "Admin123!"
-}
-```
-
-### 1.2 Login as Admin
-```json
-POST /users/login
-{
-    "email": "admin@example.com",
-    "password": "Admin123!"
-}
-```
-Save the returned token for subsequent requests.
-
-### 1.3 Register Regular User
-```json
+// Register - Requires name (min 2 chars), valid email, password (min 6 chars)
 POST /users/register
 {
     "name": "John Doe",
     "email": "john@example.com",
-    "password": "John123!"
+    "password": "password123"
+}
+
+// Login - Requires valid email and password
+POST /users/login
+{
+    "email": "john@example.com",
+    "password": "password123"
+}
+
+// Logout - Requires auth token
+POST /users/logout
+```
+
+### 1.2 Profile Management
+```json
+// Get Profile - Requires auth token
+GET /users/me
+
+// Update Profile - Optional fields, requires auth token
+PUT /users/me
+{
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "bio": "Software Developer",
+    "location": "New York"
+}
+
+// Delete Account - Requires auth token
+DELETE /users/me
+```
+
+### 1.3 User Preferences
+```json
+// Update Preferences - Requires auth token
+PUT /users/preferences
+{
+    "notifications": true,
+    "theme": "dark",
+    "language": "en"
+}
+
+// Update Time Settings - Requires auth token
+PUT /users/time-settings
+{
+    "timeZone": "America/New_York",
+    "workingHours": {
+        "start": "09:00",
+        "end": "17:00"
+    }
+}
+
+// Manage Invites - Requires auth token
+POST /users/invites
+{
+    "inviteId": "invite123",
+    "action": "accept",
+    "type": "project"
 }
 ```
 
 ## 2. Team Management Tests
 
-### 2.1 Create Team
+### 2.1 Team Operations
 ```json
+// Create Team - Requires name (2-50 chars), optional description
 POST /teams
 {
     "name": "Development Team",
     "description": "Main development team",
     "teamType": "department"
 }
-```
-Save the returned teamId.
 
-### 2.2 Get All Teams
-```json
+// Get All Teams - Requires auth token
 GET /teams
-```
 
-### 2.3 Add Team Member
-```json
-POST /teams/{teamId}/members
-{
-    "userId": "<john's-user-id>",
-    "role": "member"
-}
-```
+// Get Team Details - Requires auth token
+GET /teams/{teamId}
 
-### 2.4 Get Team Members
-```json
-GET /teams/{teamId}/members
-```
-
-### 2.5 Update Team
-```json
+// Update Team - Optional fields, requires auth token
 PUT /teams/{teamId}
 {
     "name": "Development Team Alpha",
-    "description": "Main development team - Alpha Division"
+    "description": "Updated description",
+    "isActive": true
+}
+
+// Delete Team - Requires auth token
+DELETE /teams/{teamId}
+```
+
+### 2.2 Team Member Management
+```json
+// Get Team Members - Requires auth token
+GET /teams/{teamId}/members
+
+// Add Team Member - Requires userId and optional role
+POST /teams/{teamId}/members
+{
+    "userId": "user123",
+    "role": "member"
+}
+
+// Update Member Role - Requires userId and role
+PATCH /teams/{teamId}/members/{userId}/role
+{
+    "role": "admin"
+}
+
+// Remove Team Member - Requires auth token
+DELETE /teams/{teamId}/members/{userId}
+```
+
+### 2.3 Team Statistics and Projects
+```json
+// Update Team Stats - Requires auth token
+POST /teams/{teamId}/stats
+{
+    "completedTasks": 10,
+    "pendingTasks": 5
+}
+
+// Add Project to Team - Requires auth token
+POST /teams/{teamId}/projects
+{
+    "projectId": "project123"
 }
 ```
 
 ## 3. Project Management Tests
 
-### 3.1 Create Project
+### 3.1 Project Operations
 ```json
+// Create Project - Requires title (3-100 chars), projectType
 POST /projects
 {
     "title": "E-commerce Platform",
-    "description": "Building a new e-commerce platform",
+    "description": "New e-commerce platform development",
     "projectType": "team",
-    "team": "<team-id>",
+    "team": "team123",
     "priority": "high",
     "dueDate": "2024-12-31T00:00:00.000Z"
 }
-```
-Save the returned projectId.
 
-### 3.2 Get All Projects
-```json
+// Get All Projects - Requires auth token
 GET /projects
-```
 
-### 3.3 Add Project Member
-```json
-POST /projects/{projectId}/members
-{
-    "userId": "<john's-user-id>",
-    "role": "member"
-}
-```
+// Get Project Details - Requires auth token
+GET /projects/{projectId}
 
-### 3.4 Get Project Members
-```json
-GET /projects/{projectId}/members
-```
-
-### 3.5 Update Project
-```json
+// Update Project - Optional fields, requires auth token
 PUT /projects/{projectId}
 {
     "title": "E-commerce Platform v2",
     "status": "active",
     "priority": "urgent"
 }
-```
 
-## 4. Cleanup Tests
-
-### 4.1 Remove Project Member
-```json
-DELETE /projects/{projectId}/members/{userId}
-```
-
-### 4.2 Delete Project
-```json
+// Delete Project - Requires auth token
 DELETE /projects/{projectId}
 ```
 
-### 4.3 Remove Team Member
+### 3.2 Project Member Management
 ```json
-DELETE /teams/{teamId}/members/{userId}
+// Get Project Members - Requires auth token
+GET /projects/{projectId}/members
+
+// Add Project Member - Requires userId and optional role
+POST /projects/{projectId}/members
+{
+    "userId": "user123",
+    "role": "member"
+}
+
+// Update Member Role - Requires userId and role
+PATCH /projects/{projectId}/members/{userId}/role
+{
+    "role": "admin"
+}
+
+// Remove Project Member - Requires auth token
+DELETE /projects/{projectId}/members/{userId}
 ```
 
-### 4.4 Delete Team
+### 3.3 Project Configuration
 ```json
-DELETE /teams/{teamId}
-```
+// Update Project Settings - Requires auth token
+PUT /projects/{projectId}/settings
+{
+    "visibility": "private",
+    "allowComments": true
+}
 
-### 4.5 Delete User
-```json
-DELETE /users/me
-```
+// Update Project Workflow - Requires auth token
+PUT /projects/{projectId}/workflow
+{
+    "stages": ["Todo", "In Progress", "Review", "Done"]
+}
 
-### 4.6 Logout
-```json
-POST /users/logout
+// Manage Project Tags - Requires auth token
+POST /projects/{projectId}/tags
+{
+    "action": "add",
+    "tags": ["frontend", "urgent"]
+}
 ```
 
 ## Important Notes:
 
-1. Replace placeholders:
-   - `{teamId}` with actual team ID from create team response
-   - `{projectId}` with actual project ID from create project response
-   - `{userId}` with actual user ID from registration response
+1. Authentication:
+   - All routes (except register/login) require Authorization header
+   - Format: `Authorization: Bearer <your-token>`
 
-2. Headers Required:
-   - Content-Type: application/json
-   - Authorization: Bearer <your-token>
+2. Validation Rules:
+   - Names: 2-50 characters
+   - Project titles: 3-100 characters
+   - Descriptions: max 500 characters
+   - Emails: must be valid format
+   - Passwords: minimum 6 characters
+   - Valid roles: ["admin", "member", "viewer"]
+   - Valid project types: ["personal", "team"]
+   - Valid team types: ["department", "project", "custom"]
+   - Valid priorities: ["low", "medium", "high", "urgent"]
 
-3. Testing Sequence:
-   - Always test authentication endpoints first
-   - Create resources before trying to modify them
-   - Clean up resources in reverse order of creation
+3. Error Handling:
+   - 400: Validation errors
+   - 401: Unauthorized
+   - 403: Forbidden
+   - 404: Resource not found
+   - 500: Server error

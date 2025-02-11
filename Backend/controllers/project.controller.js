@@ -257,3 +257,111 @@ export const updateProjectMemberRole = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+
+export const updateProjectSettings = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Verify user has admin access
+        if (!project.owner.equals(req.user._id) && 
+            !project.members.some(m => 
+                m.user.equals(req.user._id) && m.role === 'admin'
+            )) {
+            return res.status(403).json({ error: 'Not authorized to update settings' });
+        }
+
+        const allowedSettings = ['visibility', 'allowComments', 'allowGuestAccess', 'notifications'];
+        const updates = Object.keys(req.body);
+
+        // Validate settings
+        const isValidUpdate = updates.every(update => allowedSettings.includes(update));
+        if (!isValidUpdate) {
+            return res.status(400).json({ error: 'Invalid settings update' });
+        }
+
+        // Update settings
+        updates.forEach(update => {
+            project.settings[update] = req.body[update];
+        });
+
+        await project.save();
+        res.json({
+            settings: project.settings,
+            message: 'Project settings updated successfully'
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const updateProjectWorkflow = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Verify user has admin access
+        if (!project.owner.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Only project owner can update workflow' });
+        }
+
+        const { workflow } = req.body;
+        
+        // Validate workflow
+        if (!Array.isArray(workflow) || workflow.length === 0 || workflow.length > 10) {
+            return res.status(400).json({ 
+                error: 'Workflow must be an array with 1-10 stages' 
+            });
+        }
+
+        project.workflow = workflow;
+        await project.save();
+
+        res.json({
+            workflow: project.workflow,
+            message: 'Project workflow updated successfully'
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const manageProjectTags = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const { action, tags } = req.body;
+
+        if (!['add', 'remove'].includes(action)) {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        if (!Array.isArray(tags)) {
+            return res.status(400).json({ error: 'Tags must be an array' });
+        }
+
+        if (action === 'add') {
+            // Add new tags without duplicates
+            const uniqueTags = [...new Set([...project.tags, ...tags])];
+            project.tags = uniqueTags;
+        } else {
+            // Remove specified tags
+            project.tags = project.tags.filter(tag => !tags.includes(tag));
+        }
+
+        await project.save();
+        res.json({
+            tags: project.tags,
+            message: `Tags ${action}ed successfully`
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};

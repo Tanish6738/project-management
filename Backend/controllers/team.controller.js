@@ -204,3 +204,59 @@ export const updateTeamMemberRole = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+
+export const updateTeamTaskStats = async (req, res) => {
+    try {
+        const team = await Team.findById(req.params.teamId);
+        if (!team) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+
+        await team.updateTaskStats();
+
+        res.json({
+            taskStats: team.taskStats,
+            message: 'Team task statistics updated successfully'
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const addProjectToTeam = async (req, res) => {
+    try {
+        const team = await Team.findById(req.params.teamId);
+        if (!team) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+
+        // Check if user has permission to add projects
+        const member = team.members.find(m => m.user.equals(req.user._id));
+        if (!member?.permissions.canAddProjects) {
+            return res.status(403).json({ error: 'Not authorized to add projects' });
+        }
+
+        // Check if project exists and isn't already in team
+        const project = await Project.findById(req.body.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        if (team.projects.some(p => p.project.equals(req.body.projectId))) {
+            return res.status(400).json({ error: 'Project already in team' });
+        }
+
+        team.projects.push({
+            project: req.body.projectId,
+            addedBy: req.user._id
+        });
+
+        await team.save();
+        res.json({ 
+            message: 'Project added to team successfully',
+            team: await team.populate('projects.project')
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};

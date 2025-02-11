@@ -13,7 +13,10 @@ import {
     getProfile,
     updateProfile,
     deleteUser,
-    getAllUsers
+    getAllUsers,
+    updatePreferences,
+    manageInvites,
+    updateTimeSettings
 } from '../controllers/user.controller.js';
 
 const UserRouter = express.Router();
@@ -23,10 +26,19 @@ UserRouter.post('/register', validateRegistration, validate, register);
 UserRouter.post('/login', validateLogin, validate, login);
 UserRouter.post('/logout', auth, logout);
 
-// User routes
+// User profile routes
 UserRouter.get('/me', auth, getProfile);
 UserRouter.put('/me', auth, validateProfileUpdate, validate, updateProfile);
 UserRouter.delete('/me', auth, deleteUser);
+
+// User preferences and settings
+UserRouter.put('/preferences', auth, updatePreferences);
+UserRouter.put('/time-settings', auth, updateTimeSettings);
+
+// Invite management
+UserRouter.post('/invites', auth, manageInvites);
+
+// Admin routes
 UserRouter.get('/', auth, authRole(['admin']), getAllUsers);
 
 export default UserRouter;

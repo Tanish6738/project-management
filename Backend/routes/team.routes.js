@@ -15,7 +15,9 @@ import {
     removeTeamMember,
     getAllTeams,
     getTeamMembers,
-    updateTeamMemberRole
+    updateTeamMemberRole,
+    updateTeamTaskStats,
+    addProjectToTeam
 } from '../controllers/team.controller.js';
 
 const TeamRouter = express.Router();
@@ -32,5 +34,9 @@ TeamRouter.get('/:teamId/members', auth, getTeamMembers);
 TeamRouter.post('/:teamId/members', auth, validateTeamMemberAddition, validate, addTeamMember);
 TeamRouter.delete('/:teamId/members/:userId', auth, removeTeamMember);
 TeamRouter.patch('/:teamId/members/:userId/role', auth, validateTeamMemberAddition, validate, updateTeamMemberRole);
+
+// Team statistics and project management
+TeamRouter.post('/:teamId/stats', auth, updateTeamTaskStats);
+TeamRouter.post('/:teamId/projects', auth, addProjectToTeam);
 
 export default TeamRouter;

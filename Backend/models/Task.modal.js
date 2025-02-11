@@ -1,17 +1,21 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
+const STATUS_ENUM = ['pending', 'in-progress', 'completed'];
+const PRIORITY_ENUM = ['low', 'medium', 'high'];
+
 const TaskSchema = new Schema(
   {
     project: {
       type: Schema.Types.ObjectId,
       ref: 'Project',
-      required: true,
+      required: [true, 'Project is required'],
     },
     title: {
       type: String,
-      required: true,
+      required: [true, 'Title is required'],
       trim: true,
+      maxLength: [200, 'Title cannot exceed 200 characters'],
     },
     description: String,
     assignedTo: {
@@ -20,60 +24,154 @@ const TaskSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'in-progress', 'completed'],
+      enum: {
+        values: STATUS_ENUM,
+        message: '{VALUE} is not a valid status',
+      },
       default: 'pending',
     },
     priority: {
       type: String,
-      enum: ['low', 'medium', 'high'],
+      enum: {
+        values: PRIORITY_ENUM,
+        message: '{VALUE} is not a valid priority',
+      },
       default: 'medium',
     },
     deadline: {
       type: Date,
+      validate: {
+        validator: function(v) {
+          return v > new Date();
+        },
+        message: 'Deadline must be a future date',
+      },
     },
-    // Array of IDs for tasks that must be completed first
     dependencies: [
       {
         type: Schema.Types.ObjectId,
         ref: 'Task',
       },
     ],
-    // Indicates if the task should be visible to everyone after a condition is met
     isPublic: {
       type: Boolean,
       default: false,
     },
-    // Tags for easy filtering
     tags: [String],
-    // References to subtasks
     subtasks: [
       {
         type: Schema.Types.ObjectId,
-        ref: 'Subtask',
+        ref: 'Task',
       },
     ],
-    // References to attachments
+    isSubtask: {
+      type: Boolean,
+      default: false,
+      immutable: true,
+    },
+    parentTask: {
+      type: Schema.Types.ObjectId,
+      ref: 'Task',
+      default: null,
+    },
     attachments: [
       {
         type: Schema.Types.ObjectId,
         ref: 'Attachment',
       },
     ],
-    // References to comments (in-app chat)
     comments: [
       {
         type: Schema.Types.ObjectId,
         ref: 'Comment',
       },
     ],
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    lastUpdatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    watchers: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    timeTracking: {
+      estimated: Number, // in minutes
+      actual: Number,    // in minutes
+      timeSpent: [{
+        user: {
+          type: Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        duration: Number,
+        date: {
+          type: Date,
+          default: Date.now
+        }
+      }]
+    }
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+// Virtual field for progress
+TaskSchema.virtual('progress').get(function() {
+  if (this.status === 'completed') return 100;
+  if (this.status === 'pending') return 0;
+  return 50;
+});
+
+// Pre-save middleware
+TaskSchema.pre('save', async function(next) {
+  if (this.isSubtask && !this.parentTask) {
+    throw new Error('Subtask must have a parent task');
+  }
+  if (this.parentTask) {
+    this.isSubtask = true;
+  }
+  next();
+});
 
 // Add indexes
 TaskSchema.index({ project: 1 });
 TaskSchema.index({ assignedTo: 1 });
 TaskSchema.index({ status: 1 });
+TaskSchema.index({ parentTask: 1 });
+
+// Add methods to TaskSchema
+TaskSchema.methods = {
+  async notifyWatchers(action) {
+    // Implement notification logic
+  },
+  
+  async updateProjectMetrics() {
+    if (this.project) {
+      const Project = mongoose.model('Project');
+      await Project.updateTaskMetrics(this.project);
+    }
+  }
+};
+
+// Add pre/post hooks
+TaskSchema.post('save', async function(doc) {
+  await doc.updateProjectMetrics();
+});
+
+TaskSchema.pre('remove', async function(next) {
+  // Clean up subtasks when parent is removed
+  if (this.subtasks && this.subtasks.length > 0) {
+    await Task.deleteMany({ _id: { $in: this.subtasks } });
+  }
+  next();
+});
 
 const Task = mongoose.model('Task', TaskSchema);
 export default Task;

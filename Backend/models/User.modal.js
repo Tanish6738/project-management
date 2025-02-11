@@ -139,7 +139,24 @@ const UserSchema = new Schema({
     timestamp: Date,
     ip: String,
     device: String
-  }]
+  }],
+
+  // Task Management
+  assignedTasks: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Task'
+  }],
+  
+  watchingTasks: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Task'
+  }],
+  
+  taskStats: {
+    completed: { type: Number, default: 0 },
+    inProgress: { type: Number, default: 0 },
+    overdue: { type: Number, default: 0 }
+  }
 }, {
   timestamps: true
 });
@@ -180,6 +197,24 @@ UserSchema.methods = {
     delete user.password;
     delete user.tokens;
     return user;
+  },
+
+  updateTaskStats: async function() {
+    const Task = mongoose.model('Task');
+    const now = new Date();
+    
+    const [completed, inProgress, overdue] = await Promise.all([
+      Task.countDocuments({ assignedTo: this._id, status: 'completed' }),
+      Task.countDocuments({ assignedTo: this._id, status: 'in-progress' }),
+      Task.countDocuments({ 
+        assignedTo: this._id, 
+        status: { $ne: 'completed' },
+        deadline: { $lt: now }
+      })
+    ]);
+  
+    this.taskStats = { completed, inProgress, overdue };
+    await this.save();
   }
 };
 

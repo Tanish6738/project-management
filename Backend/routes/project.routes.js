@@ -15,7 +15,10 @@ import {
     addProjectMember,
     removeProjectMember,
     updateProjectMemberRole,
-    getProjectMembers
+    getProjectMembers,
+    updateProjectSettings,
+    updateProjectWorkflow,
+    manageProjectTags
 } from '../controllers/project.controller.js';
 
 const ProjectRouter = express.Router();
@@ -32,5 +35,10 @@ ProjectRouter.get('/:projectId/members', auth, getProjectMembers);
 ProjectRouter.post('/:projectId/members', auth, validateTeamMemberAddition, validate, addProjectMember);
 ProjectRouter.delete('/:projectId/members/:userId', auth, removeProjectMember);
 ProjectRouter.patch('/:projectId/members/:userId/role', auth, validateTeamMemberAddition, validate, updateProjectMemberRole);
+
+// Project settings and configuration routes
+ProjectRouter.put('/:projectId/settings', auth, updateProjectSettings);
+ProjectRouter.put('/:projectId/workflow', auth, updateProjectWorkflow);
+ProjectRouter.post('/:projectId/tags', auth, manageProjectTags);
 
 export default ProjectRouter;

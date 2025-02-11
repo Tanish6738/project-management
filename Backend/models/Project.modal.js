@@ -180,6 +180,24 @@ ProjectSchema.pre('save', function(next) {
   next();
 });
 
+// Add this static method to ProjectSchema
+ProjectSchema.statics.updateTaskMetrics = async function(projectId) {
+  const Task = mongoose.model('Task');
+  const totalTasks = await Task.countDocuments({ project: projectId });
+  const completedTasks = await Task.countDocuments({ 
+    project: projectId,
+    status: 'completed'
+  });
+
+  await this.findByIdAndUpdate(projectId, {
+    $set: {
+      'metrics.totalTasks': totalTasks,
+      'metrics.completedTasks': completedTasks,
+      'metrics.lastActivity': new Date()
+    }
+  });
+};
+
 // Create and export the model
 const Project = mongoose.model('Project', ProjectSchema);
 export default Project;

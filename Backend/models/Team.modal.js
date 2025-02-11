@@ -88,6 +88,12 @@ const TeamSchema = new Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    taskStats: {
+      total: { type: Number, default: 0 },
+      completed: { type: Number, default: 0 },
+      inProgress: { type: Number, default: 0 },
+      overdue: { type: Number, default: 0 }
     }
   },
   { timestamps: true }
@@ -133,6 +139,31 @@ TeamSchema.pre('remove', async function(next) {
         next(error);
     }
 });
+
+// Add method to update team task stats
+TeamSchema.methods.updateTaskStats = async function() {
+  const Project = mongoose.model('Project');
+  const Task = mongoose.model('Task');
+  
+  const teamProjects = await Project.find({ team: this._id });
+  const projectIds = teamProjects.map(p => p._id);
+  
+  const now = new Date();
+  
+  const [total, completed, inProgress, overdue] = await Promise.all([
+    Task.countDocuments({ project: { $in: projectIds } }),
+    Task.countDocuments({ project: { $in: projectIds }, status: 'completed' }),
+    Task.countDocuments({ project: { $in: projectIds }, status: 'in-progress' }),
+    Task.countDocuments({ 
+      project: { $in: projectIds }, 
+      status: { $ne: 'completed' },
+      deadline: { $lt: now }
+    })
+  ]);
+
+  this.taskStats = { total, completed, inProgress, overdue };
+  await this.save();
+};
 
 // Create and export the model instead of just the schema
 const Team = mongoose.model('Team', TeamSchema);
