@@ -19,9 +19,9 @@ import {
 const UserRouter = express.Router();
 
 // Auth routes
-UserRouter.post('/auth/register', validateRegistration, validate, register);
-UserRouter.post('/auth/login', validateLogin, validate, login);
-UserRouter.post('/auth/logout', auth, logout);
+UserRouter.post('/register', validateRegistration, validate, register);
+UserRouter.post('/login', validateLogin, validate, login);
+UserRouter.post('/logout', auth, logout);
 
 // User routes
 UserRouter.get('/me', auth, getProfile);

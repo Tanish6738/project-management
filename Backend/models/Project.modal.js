@@ -56,14 +56,19 @@ const ProjectSchema = new Schema(
       ref: 'User',
       required: true
     },
-    // Team that owns this project (if it's a team project)
+    projectType: {
+      type: String,
+      enum: ['personal', 'team'],
+      required: true
+    },
     team: {
       type: Schema.Types.ObjectId,
-      ref: 'Team'
+      ref: 'Team',
+      required: function() {
+        return this.projectType === 'team';
+      }
     },
-    // Enhanced members array with roles and permissions
     members: [ProjectMemberSchema],
-    // Customizable workflow stages
     workflow: {
       type: [String],
       default: ['To Do', 'In Progress', 'Review', 'Completed'],
@@ -167,4 +172,14 @@ ProjectSchema.pre('save', function(next) {
   next();
 });
 
-export default ProjectSchema;
+// Add validation middleware
+ProjectSchema.pre('save', function(next) {
+  if (this.projectType === 'team' && !this.team) {
+    next(new Error('Team is required for team projects'));
+  }
+  next();
+});
+
+// Create and export the model
+const Project = mongoose.model('Project', ProjectSchema);
+export default Project;

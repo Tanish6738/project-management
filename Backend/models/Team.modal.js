@@ -26,6 +26,19 @@ const TeamMemberSchema = new Schema({
       type: Boolean,
       default: true
     }
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'rejected'],
+    default: 'pending'
+  },
+  invitedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  invitedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
@@ -63,6 +76,19 @@ const TeamSchema = new Schema(
         }
       }
     ],
+    teamType: {
+      type: String,
+      enum: ['department', 'project', 'custom'],
+      default: 'custom'
+    },
+    maxMembers: {
+      type: Number,
+      default: 50
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    }
   },
   { timestamps: true }
 );
@@ -72,4 +98,42 @@ TeamSchema.index({ name: 1 });
 TeamSchema.index({ 'members.user': 1 });
 TeamSchema.index({ 'projects.project': 1 });
 
-export default TeamSchema;
+// Add validation for maximum team members
+TeamSchema.pre('save', function(next) {
+  if (this.members.length > this.maxMembers) {
+    next(new Error(`Team cannot have more than ${this.maxMembers} members`));
+  }
+  next();
+});
+
+// Add post-save hook
+TeamSchema.post('save', async function(doc) {
+    try {
+        const User = mongoose.model('User');
+        // Update team members' teams array
+        await User.updateMany(
+            { _id: { $in: doc.members.map(member => member.user) } },
+            { $addToSet: { teams: doc._id } }
+        );
+    } catch (error) {
+        console.error('Error updating user teams:', error);
+    }
+});
+
+// Add pre-remove hook to clean up user references when team is deleted
+TeamSchema.pre('remove', async function(next) {
+    try {
+        const User = mongoose.model('User');
+        await User.updateMany(
+            { teams: this._id },
+            { $pull: { teams: this._id } }
+        );
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Create and export the model instead of just the schema
+const Team = mongoose.model('Team', TeamSchema);
+export default Team;

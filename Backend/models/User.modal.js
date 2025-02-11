@@ -54,6 +54,44 @@ const UserSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team'
   }],
+  projectInvites: [{
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project'
+    },
+    invitedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending'
+    },
+    invitedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  teamInvites: [{
+    team: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team'
+    },
+    invitedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending'
+    },
+    invitedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 
   // Preferences
   preferences: {
@@ -108,6 +146,8 @@ const UserSchema = new Schema({
 
 // Index for faster queries (removed duplicate email index)
 UserSchema.index({ 'tokens.token': 1 });
+UserSchema.index({ 'projectInvites.status': 1 });
+UserSchema.index({ 'teamInvites.status': 1 });
 
 // Pre-save middleware to hash password
 UserSchema.pre('save', async function(next) {

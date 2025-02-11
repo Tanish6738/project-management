@@ -1,0 +1,259 @@
+import Project from '../models/Project.modal.js';
+import Team from '../models/Team.modal.js';
+
+export const createProject = async (req, res) => {
+    try {
+        const projectData = {
+            ...req.body,
+            owner: req.user._id,
+            members: [{
+                user: req.user._id,
+                role: 'admin',
+                permissions: {
+                    canEditTasks: true,
+                    canDeleteTasks: true,
+                    canInviteMembers: true
+                },
+                addedBy: req.user._id
+            }]
+        };
+
+        if (req.body.projectType === 'team') {
+            const team = await Team.findById(req.body.team);
+            if (!team) {
+                return res.status(404).json({ error: 'Team not found' });
+            }
+            
+            const isMember = team.members.some(member => 
+                member.user.equals(req.user._id) && 
+                ['admin', 'member'].includes(member.role)
+            );
+            
+            if (!isMember) {
+                return res.status(403).json({ error: 'Not authorized to create team projects' });
+            }
+        }
+
+        const project = new Project(projectData);
+        await project.save();
+
+        // Update user's projects array
+        await req.user.updateOne({
+            $push: { projects: project._id }
+        });
+
+        res.status(201).json(project);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const getAllProjects = async (req, res) => {
+    try {
+        const projects = await Project.find({
+            $or: [
+                { owner: req.user._id },
+                { 'members.user': req.user._id }
+            ]
+        }).populate('owner', 'name email');
+        res.json(projects);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getProjectDetails = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId)
+            .populate('owner', 'name email')
+            .populate('members.user', 'name email')
+            .populate('team', 'name');
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const isMember = project.members.some(member => 
+            member.user._id.equals(req.user._id)
+        );
+
+        if (!isMember && !project.owner.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Not authorized to view this project' });
+        }
+
+        res.json(project);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const updateProject = async (req, res) => {
+    try {
+        const project = await Project.findOne({
+            _id: req.params.projectId,
+            $or: [
+                { owner: req.user._id },
+                { 
+                    'members.user': req.user._id,
+                    'members.role': 'admin'
+                }
+            ]
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or unauthorized' });
+        }
+
+        const updates = Object.keys(req.body);
+        updates.forEach(update => project[update] = req.body[update]);
+        await project.save();
+        res.json(project);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const deleteProject = async (req, res) => {
+    try {
+        const project = await Project.findOneAndDelete({
+            _id: req.params.projectId,
+            owner: req.user._id
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or unauthorized' });
+        }
+
+        // Remove project reference from user's projects array
+        await req.user.updateOne({
+            $pull: { projects: project._id }
+        });
+
+        res.json({ message: 'Project deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getProjectMembers = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId)
+            .populate('members.user', 'name email avatar')
+            .select('members');
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const isMember = project.members.some(member => 
+            member.user._id.equals(req.user._id)
+        );
+
+        if (!isMember) {
+            return res.status(403).json({ error: 'Not authorized to view members' });
+        }
+
+        res.json(project.members);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const addProjectMember = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const isAuthorized = project.owner.equals(req.user._id) || 
+            project.members.some(member => 
+                member.user.equals(req.user._id) && 
+                member.role === 'admin' &&
+                member.permissions.canInviteMembers
+            );
+
+        if (!isAuthorized) {
+            return res.status(403).json({ error: 'Not authorized to add members' });
+        }
+
+        if (project.members.some(member => member.user.equals(req.body.userId))) {
+            return res.status(400).json({ error: 'User is already a project member' });
+        }
+
+        project.members.push({
+            user: req.body.userId,
+            role: req.body.role || 'editor',
+            permissions: {
+                canEditTasks: true,
+                canDeleteTasks: false,
+                canInviteMembers: false
+            },
+            addedBy: req.user._id
+        });
+
+        await project.save();
+        res.json(project);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const removeProjectMember = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const isAuthorized = project.owner.equals(req.user._id) || 
+            project.members.some(member => 
+                member.user.equals(req.user._id) && 
+                member.role === 'admin'
+            );
+
+        if (!isAuthorized) {
+            return res.status(403).json({ error: 'Not authorized to remove members' });
+        }
+
+        if (project.owner.equals(req.params.userId)) {
+            return res.status(400).json({ error: 'Cannot remove project owner' });
+        }
+
+        project.members = project.members.filter(
+            member => !member.user.equals(req.params.userId)
+        );
+
+        await project.save();
+        res.json(project);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const updateProjectMemberRole = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        if (!project.owner.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Only project owner can update roles' });
+        }
+
+        const memberIndex = project.members.findIndex(
+            member => member.user.equals(req.params.userId)
+        );
+
+        if (memberIndex === -1) {
+            return res.status(404).json({ error: 'Project member not found' });
+        }
+
+        project.members[memberIndex].role = req.body.role;
+        await project.save();
+        res.json(project);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};

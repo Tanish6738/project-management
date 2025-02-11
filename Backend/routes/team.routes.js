@@ -16,7 +16,7 @@ import {
     getAllTeams,
     getTeamMembers,
     updateTeamMemberRole
-} from '../controllers/Team.controller.js';
+} from '../controllers/team.controller.js';
 
 const TeamRouter = express.Router();
 
