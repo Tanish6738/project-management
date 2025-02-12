@@ -2,6 +2,12 @@
 
 Base URL: `http://localhost:3000/api`
 
+## Authentication Header
+All routes (except register/login) require the following header:
+```
+Authorization: Bearer <your-token>
+```
+
 ## 1. User Management Tests
 
 ### 1.1 User Authentication
@@ -144,100 +150,249 @@ POST /teams/{teamId}/projects
 
 ### 3.1 Project Operations
 ```json
-// Create Project - Requires title (3-100 chars), projectType
+// Create Project
 POST /projects
 {
-    "title": "E-commerce Platform",
-    "description": "New e-commerce platform development",
-    "projectType": "team",
-    "team": "team123",
-    "priority": "high",
+    "title": "New Project",
+    "description": "Project description",
+    "projectType": "team",      // "team" or "personal"
+    "team": "teamId",          // required if projectType is "team"
+    "priority": "high",        // "low", "medium", "high", "urgent"
     "dueDate": "2024-12-31T00:00:00.000Z"
 }
 
-// Get All Projects - Requires auth token
+// Get All Projects
 GET /projects
 
-// Get Project Details - Requires auth token
+// Get Project Details
 GET /projects/{projectId}
 
-// Update Project - Optional fields, requires auth token
+// Update Project
 PUT /projects/{projectId}
 {
-    "title": "E-commerce Platform v2",
-    "status": "active",
-    "priority": "urgent"
+    "title": "Updated Project",
+    "description": "Updated description",
+    "priority": "urgent",
+    "status": "active"         // "active", "archived", "completed"
 }
 
-// Delete Project - Requires auth token
+// Delete Project
 DELETE /projects/{projectId}
 ```
 
 ### 3.2 Project Member Management
 ```json
-// Get Project Members - Requires auth token
+// Get Project Members
 GET /projects/{projectId}/members
 
-// Add Project Member - Requires userId and optional role
+// Add Project Member
 POST /projects/{projectId}/members
 {
     "userId": "user123",
-    "role": "member"
+    "role": "editor"    // "admin", "editor", "viewer", "member"
 }
 
-// Update Member Role - Requires userId and role
+// Update Member Role - Owner only
 PATCH /projects/{projectId}/members/{userId}/role
 {
     "role": "admin"
 }
 
-// Remove Project Member - Requires auth token
+// Remove Project Member
 DELETE /projects/{projectId}/members/{userId}
 ```
 
-### 3.3 Project Configuration
+### 3.3 Project Settings and Configuration
 ```json
-// Update Project Settings - Requires auth token
+// Update Project Settings
 PUT /projects/{projectId}/settings
 {
-    "visibility": "private",
-    "allowComments": true
+    "visibility": "private",        // "public", "private", "team"
+    "allowComments": true,
+    "allowGuestAccess": false,
+    "notifications": {
+        "enabled": true,
+        "frequency": "instant"      // "instant", "daily", "weekly"
+    }
 }
 
-// Update Project Workflow - Requires auth token
+// Update Project Workflow
 PUT /projects/{projectId}/workflow
 {
-    "stages": ["Todo", "In Progress", "Review", "Done"]
+    "workflow": ["Todo", "In Progress", "Review", "Done"]
 }
 
-// Manage Project Tags - Requires auth token
+// Manage Project Tags
 POST /projects/{projectId}/tags
 {
-    "action": "add",
+    "action": "add",               // "add" or "remove"
     "tags": ["frontend", "urgent"]
 }
 ```
 
-## Important Notes:
+## 4. Task Management Tests
 
-1. Authentication:
-   - All routes (except register/login) require Authorization header
-   - Format: `Authorization: Bearer <your-token>`
+### 4.1 Task Operations
+```json
+// Create Task
+POST /tasks
+{
+    "project": "projectId",
+    "title": "New Task",
+    "description": "Task description",
+    "assignedTo": "userId",
+    "status": "pending",           // "pending", "in-progress", "completed"
+    "priority": "high",            // "low", "medium", "high"
+    "deadline": "2024-12-31T00:00:00.000Z",
+    "isPublic": false,
+    "tags": ["bug", "frontend"]
+}
 
-2. Validation Rules:
-   - Names: 2-50 characters
-   - Project titles: 3-100 characters
-   - Descriptions: max 500 characters
-   - Emails: must be valid format
-   - Passwords: minimum 6 characters
-   - Valid roles: ["admin", "member", "viewer"]
+// Get All Tasks
+GET /tasks
+// Optional query params: project, status, priority, assignedTo
+
+// Get Task Details
+GET /tasks/{taskId}
+
+// Update Task
+PUT /tasks/{taskId}
+{
+    "title": "Updated Task",
+    "status": "in-progress",
+    "priority": "high"
+}
+
+// Delete Task
+DELETE /tasks/{taskId}
+```
+
+### 4.2 Subtask Management
+```json
+// Get All Subtasks
+GET /tasks/{taskId}/subtasks
+
+// Create Subtask
+POST /tasks/{taskId}/subtasks
+{
+    "title": "New Subtask",
+    "description": "Subtask description",
+    "assignedTo": "userId",
+    "status": "pending",
+    "priority": "medium"
+}
+
+// Update Subtask
+PUT /tasks/{taskId}/subtasks/{subtaskId}
+{
+    "title": "Updated Subtask",
+    "status": "completed"
+}
+
+// Delete Subtask
+DELETE /tasks/{taskId}/subtasks/{subtaskId}
+
+// Reorder Subtasks
+PUT /tasks/{taskId}/subtasks-order
+{
+    "order": ["subtask1Id", "subtask2Id", "subtask3Id"]
+}
+```
+
+### 4.3 Task Time Tracking and Watchers
+```json
+// Update Time Tracking
+POST /tasks/{taskId}/time
+{
+    "duration": 120    // minutes
+}
+
+// Add Task Watcher
+POST /tasks/{taskId}/watchers
+```
+
+### 4.4 Project Task Views
+```json
+// Get Project Tasks Tree View
+GET /tasks/tree?projectId=projectId
+
+// Get Project Tasks By Status
+GET /tasks/by-status?projectId=projectId
+
+// Get Project Tasks With Details
+GET /tasks/project/{projectId}/details
+```
+
+## Validation Rules
+
+1. Projects:
+   - Title: 3-100 characters
+   - Description: max 500 characters
+   - Valid member roles: ["admin", "editor", "viewer", "member"]
    - Valid project types: ["personal", "team"]
-   - Valid team types: ["department", "project", "custom"]
-   - Valid priorities: ["low", "medium", "high", "urgent"]
+   - Valid status values: ["active", "archived", "completed"]
+   - Valid priority values: ["low", "medium", "high", "urgent"]
+   - Workflow stages: 1-10 stages
 
-3. Error Handling:
-   - 400: Validation errors
-   - 401: Unauthorized
-   - 403: Forbidden
-   - 404: Resource not found
-   - 500: Server error
+2. Tasks:
+   - Title: max 200 characters
+   - Valid status values: ["pending", "in-progress", "completed"]
+   - Valid priority values: ["low", "medium", "high"]
+   - Deadline must be a future date
+   - Subtasks must have a parent task
+   - Time tracking duration must be positive number
+
+## Response Examples
+
+### Success Responses
+```json
+// Successful Creation (201)
+{
+    "_id": "recordId",
+    ...requestData,
+    "createdAt": "2024-01-20T10:00:00.000Z",
+    "updatedAt": "2024-01-20T10:00:00.000Z"
+}
+
+// Successful Update (200)
+{
+    "message": "Resource updated successfully",
+    "data": {
+        "_id": "recordId",
+        ...updatedData
+    }
+}
+
+// Successful Deletion (200)
+{
+    "message": "Resource deleted successfully"
+}
+```
+
+### Error Responses
+```json
+// Validation Error (400)
+{
+    "error": "Validation error message"
+}
+
+// Authentication Error (401)
+{
+    "error": "Not authenticated"
+}
+
+// Authorization Error (403)
+{
+    "error": "Not authorized to perform this action"
+}
+
+// Not Found Error (404)
+{
+    "error": "Resource not found"
+}
+
+// Server Error (500)
+{
+    "error": "Internal server error"
+}
+```

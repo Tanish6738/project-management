@@ -146,6 +146,67 @@ export const validateProjectUpdate = [
         .withMessage('Invalid priority level')
 ];
 
+export const validateTaskCreation = [
+    body('project')
+        .notEmpty()
+        .withMessage('Project ID is required'),
+    body('title')
+        .trim()
+        .isLength({ min: 1, max: 200 })
+        .withMessage('Title must be between 1 and 200 characters'),
+    body('status')
+        .optional()
+        .isIn(['pending', 'in-progress', 'completed'])
+        .withMessage('Invalid status'),
+    body('priority')
+        .optional()
+        .isIn(['low', 'medium', 'high'])
+        .withMessage('Invalid priority'),
+    body('deadline')
+        .optional()
+        .isISO8601()
+        .withMessage('Invalid date format')
+        .custom(value => {
+            if (new Date(value) <= new Date()) {
+                throw new Error('Deadline must be in the future');
+            }
+            return true;
+        })
+];
+
+export const validateTaskUpdate = [
+    body('title')
+        .optional()
+        .trim()
+        .isLength({ min: 1, max: 200 })
+        .withMessage('Title must be between 1 and 200 characters'),
+    body('status')
+        .optional()
+        .isIn(['pending', 'in-progress', 'completed'])
+        .withMessage('Invalid status'),
+    body('priority')
+        .optional()
+        .isIn(['low', 'medium', 'high'])
+        .withMessage('Invalid priority'),
+    body('deadline')
+        .optional()
+        .isISO8601()
+        .withMessage('Invalid date format')
+];
+
+// Add this validation
+export const validateSubtaskOrder = [
+    body('order')
+        .isArray()
+        .withMessage('Order must be an array')
+        .custom((value, { req }) => {
+            if (!value.every(id => mongoose.Types.ObjectId.isValid(id))) {
+                throw new Error('Invalid subtask IDs in order array');
+            }
+            return true;
+        })
+];
+
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
