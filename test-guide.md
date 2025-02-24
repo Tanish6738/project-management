@@ -8,11 +8,40 @@ All routes (except register/login) require the following header:
 Authorization: Bearer <your-token>
 ```
 
+## Testing Setup Order
+
+1. First, create an admin user
+2. Then create regular users
+3. Create teams
+4. Create projects
+5. Create and manage tasks
+
 ## 1. User Management Tests
 
-### 1.1 User Authentication
+### 1.1 Initial Admin Setup
 ```json
-// Register - Requires name (min 2 chars), valid email, password (min 6 chars)
+// Register Admin (First user automatically gets admin role)
+POST /users/register
+{
+    "name": "Admin User",
+    "email": "admin@example.com",
+    "password": "adminpass123"
+}
+
+// Login as Admin
+POST /users/login
+{
+    "email": "admin@example.com",
+    "password": "adminpass123"
+}
+
+// Get All Users (Admin only)
+GET /users
+```
+
+### 1.2 Regular User Registration
+```json
+// Register Regular User
 POST /users/register
 {
     "name": "John Doe",
@@ -20,23 +49,23 @@ POST /users/register
     "password": "password123"
 }
 
-// Login - Requires valid email and password
+// Login as Regular User
 POST /users/login
 {
     "email": "john@example.com",
     "password": "password123"
 }
 
-// Logout - Requires auth token
+// Logout
 POST /users/logout
 ```
 
-### 1.2 Profile Management
+### 1.3 User Profile Management
 ```json
-// Get Profile - Requires auth token
+// Get Own Profile
 GET /users/me
 
-// Update Profile - Optional fields, requires auth token
+// Update Profile
 PUT /users/me
 {
     "name": "John Smith",
@@ -45,21 +74,24 @@ PUT /users/me
     "location": "New York"
 }
 
-// Delete Account - Requires auth token
+// Delete Account (requires re-authentication)
 DELETE /users/me
 ```
 
-### 1.3 User Preferences
+### 1.4 User Settings
 ```json
-// Update Preferences - Requires auth token
+// Update Preferences
 PUT /users/preferences
 {
-    "notifications": true,
+    "notifications": {
+        "email": true,
+        "push": true
+    },
     "theme": "dark",
     "language": "en"
 }
 
-// Update Time Settings - Requires auth token
+// Update Time Settings
 PUT /users/time-settings
 {
     "timeZone": "America/New_York",
@@ -68,35 +100,28 @@ PUT /users/time-settings
         "end": "17:00"
     }
 }
-
-// Manage Invites - Requires auth token
-POST /users/invites
-{
-    "inviteId": "invite123",
-    "action": "accept",
-    "type": "project"
-}
 ```
 
 ## 2. Team Management Tests
 
-### 2.1 Team Operations
+### 2.1 Basic Team Operations
 ```json
-// Create Team - Requires name (2-50 chars), optional description
+// Create Team (requires authenticated user)
 POST /teams
 {
     "name": "Development Team",
     "description": "Main development team",
-    "teamType": "department"
+    "teamType": "department",
+    "maxMembers": 50
 }
 
-// Get All Teams - Requires auth token
+// Get All Teams
 GET /teams
 
-// Get Team Details - Requires auth token
+// Get Specific Team
 GET /teams/{teamId}
 
-// Update Team - Optional fields, requires auth token
+// Update Team (team owner only)
 PUT /teams/{teamId}
 {
     "name": "Development Team Alpha",
@@ -104,61 +129,65 @@ PUT /teams/{teamId}
     "isActive": true
 }
 
-// Delete Team - Requires auth token
+// Delete Team (team owner only)
 DELETE /teams/{teamId}
 ```
 
 ### 2.2 Team Member Management
 ```json
-// Get Team Members - Requires auth token
+// Get Team Members
 GET /teams/{teamId}/members
 
-// Add Team Member - Requires userId and optional role
+// Add Team Member (admin/owner only)
 POST /teams/{teamId}/members
 {
     "userId": "user123",
-    "role": "member"
+    "role": "member",
+    "permissions": {
+        "canAddProjects": true,
+        "canRemoveProjects": false,
+        "canViewAllProjects": true
+    }
 }
 
-// Update Member Role - Requires userId and role
+// Update Member Role (owner only)
 PATCH /teams/{teamId}/members/{userId}/role
 {
     "role": "admin"
 }
 
-// Remove Team Member - Requires auth token
+// Remove Team Member (admin/owner only)
 DELETE /teams/{teamId}/members/{userId}
 ```
 
-### 2.3 Team Statistics and Projects
+### 2.3 Team Statistics
 ```json
-// Update Team Stats - Requires auth token
+// Update Team Stats
 POST /teams/{teamId}/stats
 {
     "completedTasks": 10,
     "pendingTasks": 5
 }
-
-// Add Project to Team - Requires auth token
-POST /teams/{teamId}/projects
-{
-    "projectId": "project123"
-}
 ```
 
 ## 3. Project Management Tests
 
-### 3.1 Project Operations
+### 3.1 Project Creation and Management
 ```json
 // Create Project
 POST /projects
 {
     "title": "New Project",
     "description": "Project description",
-    "projectType": "team",      // "team" or "personal"
-    "team": "teamId",          // required if projectType is "team"
-    "priority": "high",        // "low", "medium", "high", "urgent"
-    "dueDate": "2024-12-31T00:00:00.000Z"
+    "projectType": "team",
+    "team": "teamId",
+    "priority": "high",
+    "dueDate": "2024-12-31T00:00:00.000Z",
+    "settings": {
+        "visibility": "team",
+        "allowComments": true,
+        "allowGuestAccess": false
+    }
 }
 
 // Get All Projects
@@ -167,16 +196,16 @@ GET /projects
 // Get Project Details
 GET /projects/{projectId}
 
-// Update Project
+// Update Project (owner/admin only)
 PUT /projects/{projectId}
 {
     "title": "Updated Project",
     "description": "Updated description",
     "priority": "urgent",
-    "status": "active"         // "active", "archived", "completed"
+    "status": "active"
 }
 
-// Delete Project
+// Delete Project (owner only)
 DELETE /projects/{projectId}
 ```
 
@@ -185,34 +214,39 @@ DELETE /projects/{projectId}
 // Get Project Members
 GET /projects/{projectId}/members
 
-// Add Project Member
+// Add Project Member (admin/owner only)
 POST /projects/{projectId}/members
 {
     "userId": "user123",
-    "role": "editor"    // "admin", "editor", "viewer", "member"
+    "role": "editor",
+    "permissions": {
+        "canEditTasks": true,
+        "canDeleteTasks": false,
+        "canInviteMembers": false
+    }
 }
 
-// Update Member Role - Owner only
+// Update Member Role (owner only)
 PATCH /projects/{projectId}/members/{userId}/role
 {
     "role": "admin"
 }
 
-// Remove Project Member
+// Remove Project Member (admin/owner only)
 DELETE /projects/{projectId}/members/{userId}
 ```
 
-### 3.3 Project Settings and Configuration
+### 3.3 Project Configuration
 ```json
 // Update Project Settings
 PUT /projects/{projectId}/settings
 {
-    "visibility": "private",        // "public", "private", "team"
+    "visibility": "private",
     "allowComments": true,
     "allowGuestAccess": false,
     "notifications": {
         "enabled": true,
-        "frequency": "instant"      // "instant", "daily", "weekly"
+        "frequency": "instant"
     }
 }
 
@@ -225,7 +259,7 @@ PUT /projects/{projectId}/workflow
 // Manage Project Tags
 POST /projects/{projectId}/tags
 {
-    "action": "add",               // "add" or "remove"
+    "action": "add",
     "tags": ["frontend", "urgent"]
 }
 ```
@@ -241,16 +275,15 @@ POST /tasks
     "title": "New Task",
     "description": "Task description",
     "assignedTo": "userId",
-    "status": "pending",           // "pending", "in-progress", "completed"
-    "priority": "high",            // "low", "medium", "high"
+    "status": "pending",
+    "priority": "high",
     "deadline": "2024-12-31T00:00:00.000Z",
     "isPublic": false,
     "tags": ["bug", "frontend"]
 }
 
-// Get All Tasks
-GET /tasks
-// Optional query params: project, status, priority, assignedTo
+// Get Tasks with Filters
+GET /tasks?project=projectId&status=pending&priority=high&assignedTo=userId
 
 // Get Task Details
 GET /tasks/{taskId}
@@ -269,7 +302,7 @@ DELETE /tasks/{taskId}
 
 ### 4.2 Subtask Management
 ```json
-// Get All Subtasks
+// Get Task's Subtasks
 GET /tasks/{taskId}/subtasks
 
 // Create Subtask
@@ -299,19 +332,19 @@ PUT /tasks/{taskId}/subtasks-order
 }
 ```
 
-### 4.3 Task Time Tracking and Watchers
+### 4.3 Task Time Tracking
 ```json
 // Update Time Tracking
 POST /tasks/{taskId}/time
 {
-    "duration": 120    // minutes
+    "duration": 120
 }
 
 // Add Task Watcher
 POST /tasks/{taskId}/watchers
 ```
 
-### 4.4 Project Task Views
+### 4.4 Task Views
 ```json
 // Get Project Tasks Tree View
 GET /tasks/tree?projectId=projectId
@@ -323,76 +356,42 @@ GET /tasks/by-status?projectId=projectId
 GET /tasks/project/{projectId}/details
 ```
 
-## Validation Rules
+## Testing Best Practices
 
-1. Projects:
-   - Title: 3-100 characters
-   - Description: max 500 characters
-   - Valid member roles: ["admin", "editor", "viewer", "member"]
-   - Valid project types: ["personal", "team"]
-   - Valid status values: ["active", "archived", "completed"]
-   - Valid priority values: ["low", "medium", "high", "urgent"]
-   - Workflow stages: 1-10 stages
+1. **Authentication Flow**:
+   - Save the token received after login
+   - Use the token in the Authorization header for subsequent requests
+   - Test token expiration and logout
 
-2. Tasks:
-   - Title: max 200 characters
-   - Valid status values: ["pending", "in-progress", "completed"]
-   - Valid priority values: ["low", "medium", "high"]
-   - Deadline must be a future date
-   - Subtasks must have a parent task
-   - Time tracking duration must be positive number
+2. **Role-Based Access**:
+   - Test with different user roles (admin, member, viewer)
+   - Verify permission restrictions
+   - Test unauthorized access scenarios
 
-## Response Examples
+3. **Data Validation**:
+   - Test with invalid data formats
+   - Test field length restrictions
+   - Test required field validation
 
-### Success Responses
+## Common Response Codes
+
 ```json
-// Successful Creation (201)
-{
-    "_id": "recordId",
-    ...requestData,
-    "createdAt": "2024-01-20T10:00:00.000Z",
-    "updatedAt": "2024-01-20T10:00:00.000Z"
-}
+// Success Responses
+201 - Resource Created
+200 - Success
+204 - No Content
 
-// Successful Update (200)
-{
-    "message": "Resource updated successfully",
-    "data": {
-        "_id": "recordId",
-        ...updatedData
-    }
-}
-
-// Successful Deletion (200)
-{
-    "message": "Resource deleted successfully"
-}
+// Error Responses
+400 - Validation Error
+401 - Authentication Error
+403 - Authorization Error
+404 - Resource Not Found
+500 - Server Error
 ```
 
-### Error Responses
+## Error Response Format
 ```json
-// Validation Error (400)
 {
-    "error": "Validation error message"
-}
-
-// Authentication Error (401)
-{
-    "error": "Not authenticated"
-}
-
-// Authorization Error (403)
-{
-    "error": "Not authorized to perform this action"
-}
-
-// Not Found Error (404)
-{
-    "error": "Resource not found"
-}
-
-// Server Error (500)
-{
-    "error": "Internal server error"
+    "error": "Specific error message"
 }
 ```
