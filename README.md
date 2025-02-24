@@ -1,5 +1,5 @@
 # API Testing Guide
-
+ 
 Base URL: `http://localhost:3000/api`
 
 ## 1. User Authentication Tests
