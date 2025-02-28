@@ -1,7 +1,45 @@
 import React from 'react'
 import StackCarousel from '../ani/UI/StackCarousel'
+import CustomPage1 from '../ani/UI/CustomPage1'
 
 const Features = () => {
+  const theme = {
+    colors: {
+      primary: 'black',
+      secondary: 'gray',
+      background: 'white',
+      text: {
+        primary: 'black',
+        secondary: 'gray-500',
+        light: 'white'
+      }
+    },
+    gradient: {
+      from: 'white',
+      to: 'white'
+    },
+    animated: {
+      underline: {
+        stroke: '#000000',
+        strokeWidth: 4,
+        fill: 'none',
+        pathAnimation: {
+          delay: 0.3,
+          duration: 1.5,
+          bounce: 0
+        },
+        opacityAnimation: {
+          delay: 0.3,
+          duration: 0.8
+        }
+      },
+      text: {
+        color: 'black',
+        highlightedColor: 'black'
+      }
+    }
+  };
+
   const featureCards = [
     {
       id: 1,
@@ -23,48 +61,47 @@ const Features = () => {
     }
   ];
 
+  const highlights = [
+    "Real-time team collaboration",
+    "Interactive project timelines",
+    "Intuitive task management",
+    "Resource allocation tracking"
+  ];
+
   return (
-    <section className="min-h-screen flex flex-col items-center w-full py-16 bg-gray-50">
+    <section className={`min-h-screen flex flex-col items-center w-full py-16 bg-${theme.colors.background}`}>
       <div className="w-full text-center mb-16">
-        <h1 className="text-5xl font-['Berlin_Sans_FB'] text-gray-900 border-b-2 border-gray-900 inline-block pb-2">
+        <h1 className={`text-5xl font-['Berlin_Sans_FB'] text-${theme.colors.primary} border-b-2 border-${theme.colors.primary} inline-block pb-2`}>
           Key Features
         </h1>
       </div>
-      <div className="flex justify-center items-center">
-        <StackCarousel 
-          cardsData={featureCards}
+      <div className="flex justify-center items-center w-full">
+        <CustomPage1
           theme={{
-            card: {
-              background: 'white',
-              text: {
-                title: 'from-gray-900 to-gray-800',
-                description: 'gray-600'
-              },
-              overlay: {
-                from: 'gray-100/50',
-                via: 'transparent',
-                to: 'gray-100/50'
-              }
+            primary: theme.colors.primary,
+            secondary: theme.colors.secondary,
+            text: {
+              light: theme.colors.text.light,
+              dark: theme.colors.text.primary,
+              muted: theme.colors.text.secondary
             },
-            animation: {
-              stiffness: 260,
-              damping: 20,
-              duration: 0.5
-            }
+            background: {
+              gradient: theme.gradient
+            },
+            animated: theme.animated
           }}
-          config={{
-            randomRotation: true,
-            sensitivity: 150,
-            cardDimensions: { width: 320, height: 400 },
-            showControls: true,
-            showDescription: true,
-            maxRotation: 4,
-            scaleStep: 0.05,
-            stiffness: 300,
-            damping: 25,
-            mass: 0.8,
-            velocity: 0.2,
-            dragPower: 0.2
+          heading={{
+            preText: "Discover ",
+            highlightedText: "Powerful Features",
+            postText: " for Projects "
+          }}
+          description="Transform your project management experience with our comprehensive suite of tools designed to streamline collaboration and boost productivity."
+          features={featureCards}
+          highlights={highlights}
+          stackConfig={{
+            cardDimensions: { width: 350, height: 250 },
+            sensitivity: 120,
+            randomRotation: true
           }}
         />
       </div>
