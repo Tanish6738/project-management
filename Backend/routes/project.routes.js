@@ -1,9 +1,13 @@
 import express from 'express';
-import { auth } from '../middlewares/auth.middleware.js';
+import { auth, projectAuth } from '../middlewares/auth.middleware.js';
 import { 
-    validateProjectCreation,
-    validateProjectUpdate,
-    validateTeamMemberAddition,
+    validateProjectCreation, 
+    validateProjectUpdate, 
+    validateProjectMemberAddition,
+    validateProjectMemberRoleUpdate,
+    validateProjectSettings,
+    validateProjectWorkflow,
+    validateProjectTags,
     validate 
 } from '../middlewares/validator.middleware.js';
 import {
@@ -14,8 +18,8 @@ import {
     deleteProject,
     addProjectMember,
     removeProjectMember,
-    updateProjectMemberRole,
     getProjectMembers,
+    updateProjectMemberRole,
     updateProjectSettings,
     updateProjectWorkflow,
     manageProjectTags
@@ -27,18 +31,18 @@ const ProjectRouter = express.Router();
 ProjectRouter.post('/', auth, validateProjectCreation, validate, createProject);
 ProjectRouter.get('/', auth, getAllProjects);
 ProjectRouter.get('/:projectId', auth, getProjectDetails);
-ProjectRouter.put('/:projectId', auth, validateProjectUpdate, validate, updateProject);
-ProjectRouter.delete('/:projectId', auth, deleteProject);
+ProjectRouter.put('/:projectId', auth, projectAuth('editor'), validateProjectUpdate, validate, updateProject);
+ProjectRouter.delete('/:projectId', auth, projectAuth('admin'), deleteProject);
 
-// Project member management routes
+// Project members management
 ProjectRouter.get('/:projectId/members', auth, getProjectMembers);
-ProjectRouter.post('/:projectId/members', auth, validateTeamMemberAddition, validate, addProjectMember);
-ProjectRouter.delete('/:projectId/members/:userId', auth, removeProjectMember);
-ProjectRouter.patch('/:projectId/members/:userId/role', auth, validateTeamMemberAddition, validate, updateProjectMemberRole);
+ProjectRouter.post('/:projectId/members', auth, projectAuth('admin'), validateProjectMemberAddition, validate, addProjectMember);
+ProjectRouter.delete('/:projectId/members/:userId', auth, projectAuth('admin'), removeProjectMember);
+ProjectRouter.patch('/:projectId/members/:userId/role', auth, projectAuth('admin'), validateProjectMemberRoleUpdate, validate, updateProjectMemberRole);
 
-// Project settings and configuration routes
-ProjectRouter.put('/:projectId/settings', auth, updateProjectSettings);
-ProjectRouter.put('/:projectId/workflow', auth, updateProjectWorkflow);
-ProjectRouter.post('/:projectId/tags', auth, manageProjectTags);
+// Project configuration routes
+ProjectRouter.put('/:projectId/settings', auth, projectAuth('admin'), validateProjectSettings, validate, updateProjectSettings);
+ProjectRouter.put('/:projectId/workflow', auth, projectAuth('admin'), validateProjectWorkflow, validate, updateProjectWorkflow);
+ProjectRouter.post('/:projectId/tags', auth, projectAuth('editor'), validateProjectTags, validate, manageProjectTags);
 
 export default ProjectRouter;

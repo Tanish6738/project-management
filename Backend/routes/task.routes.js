@@ -1,55 +1,63 @@
 import express from 'express';
-import { auth } from '../middlewares/auth.middleware.js';
+import { auth, projectAuth } from '../middlewares/auth.middleware.js';
+import { 
+    validateTaskCreation, 
+    validateTaskUpdate, 
+    validateSubtaskCreation,
+    validateSubtaskOrder,
+    validateTimeTracking,
+    validateTaskFilters,
+    validate 
+} from '../middlewares/validator.middleware.js';
 import {
     createTask,
     getAllTasks,
     getTaskDetails,
     updateTask,
     deleteTask,
+    getTasksByProject,
     createSubtask,
-    getAllSubtasks,
+    getSubtasks,
     updateSubtask,
     deleteSubtask,
     reorderSubtasks,
-    updateTimeTracking,
+    addTimeToTask,
     addTaskWatcher,
-    getProjectTasksTree,
-    getProjectTasksByStatus,
-    getProjectTasksWithDetails
+    removeTaskWatcher,
+    getTaskTreeView,
+    getTasksByStatus,
+    getProjectTasksDetails
 } from '../controllers/task.controller.js';
-import { 
-    validateTaskCreation, 
-    validateTaskUpdate, 
-    validate 
-} from '../middlewares/validator.middleware.js';
 
 const TaskRouter = express.Router();
 
-// Task management routes
+// Basic task operations
 TaskRouter.post('/', auth, validateTaskCreation, validate, createTask);
-TaskRouter.get('/', auth, getAllTasks);
+TaskRouter.get('/', auth, validateTaskFilters, getAllTasks);
 TaskRouter.get('/:taskId', auth, getTaskDetails);
 TaskRouter.put('/:taskId', auth, validateTaskUpdate, validate, updateTask);
 TaskRouter.delete('/:taskId', auth, deleteTask);
 
-// Subtask management routes
-TaskRouter.get('/:taskId/subtasks', auth, getAllSubtasks);
-TaskRouter.post('/:taskId/subtasks', auth, validateTaskCreation, validate, createSubtask);
+// Project-specific task operations
+TaskRouter.get('/project/:projectId', auth, getTasksByProject);
+
+// Subtask operations
+TaskRouter.get('/:taskId/subtasks', auth, getSubtasks);
+TaskRouter.post('/:taskId/subtasks', auth, validateSubtaskCreation, validate, createSubtask);
 TaskRouter.put('/:taskId/subtasks/:subtaskId', auth, validateTaskUpdate, validate, updateSubtask);
 TaskRouter.delete('/:taskId/subtasks/:subtaskId', auth, deleteSubtask);
-TaskRouter.put('/:taskId/subtasks-order', auth, reorderSubtasks);
+TaskRouter.put('/:taskId/subtasks-order', auth, validateSubtaskOrder, validate, reorderSubtasks);
 
-// Time tracking routes
-TaskRouter.post('/:taskId/time', auth, updateTimeTracking);
+// Time tracking
+TaskRouter.post('/:taskId/time', auth, validateTimeTracking, validate, addTimeToTask);
 
-// Task watcher routes
+// Task watchers
 TaskRouter.post('/:taskId/watchers', auth, addTaskWatcher);
+TaskRouter.delete('/:taskId/watchers', auth, removeTaskWatcher);
 
-// Add new routes for tree view and status-grouped view
-TaskRouter.get('/tree', auth, getProjectTasksTree);
-TaskRouter.get('/by-status', auth, getProjectTasksByStatus);
-
-// Add this new route before export
-TaskRouter.get('/project/:projectId/details', auth, getProjectTasksWithDetails);
+// Advanced task views
+TaskRouter.get('/tree', auth, getTaskTreeView);
+TaskRouter.get('/by-status', auth, getTasksByStatus);
+TaskRouter.get('/project/:projectId/details', auth, getProjectTasksDetails);
 
 export default TaskRouter;

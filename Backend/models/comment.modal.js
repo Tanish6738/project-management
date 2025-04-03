@@ -28,4 +28,9 @@ const CommentSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Comment', CommentSchema);
+// Add indexes for better performance
+CommentSchema.index({ task: 1 });
+CommentSchema.index({ user: 1 });
+
+const Comment = mongoose.model('Comment', CommentSchema);
+export default Comment;

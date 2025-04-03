@@ -113,7 +113,27 @@ const TaskSchema = new Schema(
           default: Date.now
         }
       }]
-    }
+    },
+    notifications: [{
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      message: String,
+      action: String,
+      actorUser: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      isRead: {
+        type: Boolean,
+        default: false
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
   },
   {
     timestamps: true,
@@ -148,8 +168,84 @@ TaskSchema.index({ parentTask: 1 });
 
 // Add methods to TaskSchema
 TaskSchema.methods = {
-  async notifyWatchers(action) {
-    // Implement notification logic
+  async notifyWatchers(action, actorUserId = null) {
+    try {
+      // Skip if no watchers
+      if (!this.watchers || this.watchers.length === 0) {
+        return;
+      }
+
+      const User = mongoose.model('User');
+      const AuditLog = mongoose.model('AuditLog');
+      
+      // Get action message based on the action type
+      let message = '';
+      switch (action) {
+        case 'create':
+          message = `Task "${this.title}" was created`;
+          break;
+        case 'update':
+          message = `Task "${this.title}" was updated`;
+          break;
+        case 'comment':
+          message = `New comment on task "${this.title}"`;
+          break;
+        case 'attachment':
+          message = `New attachment added to task "${this.title}"`;
+          break;
+        case 'status':
+          message = `Task "${this.title}" status changed to ${this.status}`;
+          break;
+        case 'assignment':
+          message = `Task "${this.title}" was assigned`;
+          break;
+        case 'deadline':
+          message = `Deadline for task "${this.title}" was updated`;
+          break;
+        default:
+          message = `Task "${this.title}" was modified`;
+      }
+      
+      // Create notification for each watcher
+      const notifications = this.watchers.map(watcherId => ({
+        user: watcherId,
+        message,
+        action,
+        actorUser: actorUserId,
+        isRead: false,
+        createdAt: new Date()
+      }));
+      
+      // Add notifications to the task
+      if (!this.notifications) {
+        this.notifications = [];
+      }
+      
+      this.notifications.push(...notifications);
+      await this.save();
+      
+      // Log the notification action
+      await AuditLog.create({
+        user: actorUserId,
+        action: 'notify_watchers',
+        targetModel: 'Task',
+        targetId: this._id,
+        details: {
+          taskId: this._id,
+          action,
+          watchersCount: this.watchers.length
+        }
+      });
+      
+      // You could also implement email notifications here
+      // For now, we'll just update the users' notification settings
+      
+      // Return notification count
+      return notifications.length;
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+      return 0;
+    }
   },
   
   async updateProjectMetrics() {

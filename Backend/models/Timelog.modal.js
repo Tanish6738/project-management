@@ -18,9 +18,29 @@ const TimeLogSchema = new Schema(
       type: Number,
       required: true,
     },
+    startTime: {
+      type: Date,
+      default: Date.now
+    },
+    endTime: Date,
     description: String,
+    billable: {
+      type: Boolean,
+      default: true
+    },
+    status: {
+      type: String,
+      enum: ['active', 'paused', 'completed'],
+      default: 'completed'
+    }
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('TimeLog', TimeLogSchema);
+// Add indexes for performance
+TimeLogSchema.index({ task: 1 });
+TimeLogSchema.index({ user: 1 });
+TimeLogSchema.index({ startTime: 1 });
+
+const TimeLog = mongoose.model('TimeLog', TimeLogSchema);
+export default TimeLog;

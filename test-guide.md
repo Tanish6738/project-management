@@ -3,95 +3,65 @@
 Base URL: `http://localhost:3000/api`
 
 ## Authentication Header
-All routes (except register/login) require the following header:
+For all authenticated routes, include this header:
 ```
 Authorization: Bearer <your-token>
 ```
 
-## Testing Setup Order
+## 1. Authentication System
 
-1. First, create an admin user
-2. Then create regular users
-3. Create teams
-4. Create projects
-5. Create and manage tasks
-
-## 1. User Management Tests
-
-### 1.1 Initial Admin Setup
+### 1.1 User Registration and Authentication
 ```json
-// Register Admin (First user automatically gets admin role)
-POST /users/register
-{
-    "name": "Admin User",
-    "email": "admin@example.com",
-    "password": "adminpass123"
-}
-
-// Login as Admin
-POST /users/login
-{
-    "email": "admin@example.com",
-    "password": "adminpass123"
-}
-
-// Get All Users (Admin only)
-GET /users
-```
-
-### 1.2 Regular User Registration
-```json
-// Register Regular User
+// Register a new user
 POST /users/register
 {
     "name": "John Doe",
     "email": "john@example.com",
-    "password": "password123"
+    "password": "Password123"
 }
 
-// Login as Regular User
+// Login
 POST /users/login
 {
     "email": "john@example.com",
-    "password": "password123"
+    "password": "Password123"
+}
+
+// Refresh token
+POST /auth/refresh-token
+{
+    "oldToken": "your-expired-token"
 }
 
 // Logout
 POST /users/logout
 ```
 
-### 1.3 User Profile Management
+### 1.2 User Profile and Settings
 ```json
-// Get Own Profile
+// Get user profile
 GET /users/me
 
-// Update Profile
+// Update profile
 PUT /users/me
 {
     "name": "John Smith",
-    "email": "john.smith@example.com",
     "bio": "Software Developer",
     "location": "New York"
 }
 
-// Delete Account (requires re-authentication)
-DELETE /users/me
-```
-
-### 1.4 User Settings
-```json
-// Update Preferences
+// Update user preferences
 PUT /users/preferences
 {
     "notifications": {
         "email": true,
-        "push": true
+        "push": false
     },
     "theme": "dark",
     "language": "en"
 }
 
-// Update Time Settings
+// Update time settings
 PUT /users/time-settings
 {
     "timeZone": "America/New_York",
@@ -100,28 +70,42 @@ PUT /users/time-settings
         "end": "17:00"
     }
 }
+
+// Delete account
+DELETE /users/me
 ```
 
-## 2. Team Management Tests
-
-### 2.1 Basic Team Operations
+### 1.3 Invitation Management
 ```json
-// Create Team (requires authenticated user)
+// Manage project/team invitations
+POST /users/invites
+{
+    "inviteId": "invitation-id",
+    "action": "accept", // or "reject"
+    "type": "project" // or "team"
+}
+```
+
+## 2. Team Management System
+
+### 2.1 Team CRUD Operations
+```json
+// Create team
 POST /teams
 {
     "name": "Development Team",
     "description": "Main development team",
     "teamType": "department",
-    "maxMembers": 50
+    "maxMembers": 10
 }
 
-// Get All Teams
+// Get all teams
 GET /teams
 
-// Get Specific Team
+// Get specific team
 GET /teams/{teamId}
 
-// Update Team (team owner only)
+// Update team
 PUT /teams/{teamId}
 {
     "name": "Development Team Alpha",
@@ -129,19 +113,19 @@ PUT /teams/{teamId}
     "isActive": true
 }
 
-// Delete Team (team owner only)
+// Delete team
 DELETE /teams/{teamId}
 ```
 
 ### 2.2 Team Member Management
 ```json
-// Get Team Members
+// Get team members
 GET /teams/{teamId}/members
 
-// Add Team Member (admin/owner only)
+// Add team member
 POST /teams/{teamId}/members
 {
-    "userId": "user123",
+    "userId": "user-id",
     "role": "member",
     "permissions": {
         "canAddProjects": true,
@@ -150,39 +134,41 @@ POST /teams/{teamId}/members
     }
 }
 
-// Update Member Role (owner only)
+// Update member role
 PATCH /teams/{teamId}/members/{userId}/role
 {
     "role": "admin"
 }
 
-// Remove Team Member (admin/owner only)
+// Remove team member
 DELETE /teams/{teamId}/members/{userId}
 ```
 
-### 2.3 Team Statistics
+### 2.3 Team Statistics and Projects
 ```json
-// Update Team Stats
+// Update team statistics
 POST /teams/{teamId}/stats
+
+// Add project to team
+POST /teams/{teamId}/projects
 {
-    "completedTasks": 10,
-    "pendingTasks": 5
+    "projectId": "project-id"
 }
 ```
 
-## 3. Project Management Tests
+## 3. Project Management System
 
-### 3.1 Project Creation and Management
+### 3.1 Project CRUD Operations
 ```json
-// Create Project
+// Create project
 POST /projects
 {
-    "title": "New Project",
-    "description": "Project description",
+    "title": "E-commerce Website",
+    "description": "Build an e-commerce website with shopping cart",
     "projectType": "team",
-    "team": "teamId",
+    "team": "team-id", // required if projectType is "team"
     "priority": "high",
-    "dueDate": "2024-12-31T00:00:00.000Z",
+    "dueDate": "2023-12-31T00:00:00.000Z",
     "settings": {
         "visibility": "team",
         "allowComments": true,
@@ -190,34 +176,33 @@ POST /projects
     }
 }
 
-// Get All Projects
+// Get all projects
 GET /projects
 
-// Get Project Details
+// Get specific project
 GET /projects/{projectId}
 
-// Update Project (owner/admin only)
+// Update project
 PUT /projects/{projectId}
 {
-    "title": "Updated Project",
-    "description": "Updated description",
+    "title": "E-commerce Website v2",
     "priority": "urgent",
     "status": "active"
 }
 
-// Delete Project (owner only)
+// Delete project
 DELETE /projects/{projectId}
 ```
 
 ### 3.2 Project Member Management
 ```json
-// Get Project Members
+// Get project members
 GET /projects/{projectId}/members
 
-// Add Project Member (admin/owner only)
+// Add project member
 POST /projects/{projectId}/members
 {
-    "userId": "user123",
+    "userId": "user-id",
     "role": "editor",
     "permissions": {
         "canEditTasks": true,
@@ -226,19 +211,19 @@ POST /projects/{projectId}/members
     }
 }
 
-// Update Member Role (owner only)
+// Update member role
 PATCH /projects/{projectId}/members/{userId}/role
 {
     "role": "admin"
 }
 
-// Remove Project Member (admin/owner only)
+// Remove project member
 DELETE /projects/{projectId}/members/{userId}
 ```
 
-### 3.3 Project Configuration
+### 3.3 Project Configuration and Settings
 ```json
-// Update Project Settings
+// Update project settings
 PUT /projects/{projectId}/settings
 {
     "visibility": "private",
@@ -246,152 +231,161 @@ PUT /projects/{projectId}/settings
     "allowGuestAccess": false,
     "notifications": {
         "enabled": true,
-        "frequency": "instant"
+        "frequency": "daily"
     }
 }
 
-// Update Project Workflow
+// Update project workflow
 PUT /projects/{projectId}/workflow
 {
-    "workflow": ["Todo", "In Progress", "Review", "Done"]
+    "workflow": ["Backlog", "To Do", "In Progress", "QA", "Done"]
 }
 
-// Manage Project Tags
+// Manage project tags
 POST /projects/{projectId}/tags
 {
     "action": "add",
-    "tags": ["frontend", "urgent"]
+    "tags": ["frontend", "urgent", "bug"]
 }
 ```
 
-## 4. Task Management Tests
+## 4. Task Management System
 
-### 4.1 Task Operations
+### 4.1 Basic Task Operations
 ```json
-// Create Task
+// Create task
 POST /tasks
 {
-    "project": "projectId",
-    "title": "New Task",
-    "description": "Task description",
-    "assignedTo": "userId",
+    "project": "project-id",
+    "title": "Implement login functionality",
+    "description": "Create login form and authentication logic",
+    "assignedTo": "user-id",
     "status": "pending",
     "priority": "high",
-    "deadline": "2024-12-31T00:00:00.000Z",
-    "isPublic": false,
-    "tags": ["bug", "frontend"]
+    "deadline": "2023-11-30T00:00:00.000Z",
+    "tags": ["frontend", "auth"]
 }
 
-// Get Tasks with Filters
+// Get all tasks with filters
 GET /tasks?project=projectId&status=pending&priority=high&assignedTo=userId
 
-// Get Task Details
+// Get task details
 GET /tasks/{taskId}
 
-// Update Task
+// Update task
 PUT /tasks/{taskId}
 {
-    "title": "Updated Task",
+    "title": "Implement login and registration",
     "status": "in-progress",
-    "priority": "high"
+    "priority": "high",
+    "deadline": "2023-12-15T00:00:00.000Z"
 }
 
-// Delete Task
+// Delete task
 DELETE /tasks/{taskId}
 ```
 
 ### 4.2 Subtask Management
 ```json
-// Get Task's Subtasks
+// Get task's subtasks
 GET /tasks/{taskId}/subtasks
 
-// Create Subtask
+// Create subtask
 POST /tasks/{taskId}/subtasks
 {
-    "title": "New Subtask",
-    "description": "Subtask description",
-    "assignedTo": "userId",
-    "status": "pending",
+    "title": "Create login form UI",
+    "description": "Implement React form with validation",
+    "assignedTo": "user-id",
     "priority": "medium"
 }
 
-// Update Subtask
+// Update subtask
 PUT /tasks/{taskId}/subtasks/{subtaskId}
 {
-    "title": "Updated Subtask",
+    "title": "Create login form UI with Material UI",
     "status": "completed"
 }
 
-// Delete Subtask
+// Delete subtask
 DELETE /tasks/{taskId}/subtasks/{subtaskId}
 
-// Reorder Subtasks
+// Reorder subtasks
 PUT /tasks/{taskId}/subtasks-order
 {
-    "order": ["subtask1Id", "subtask2Id", "subtask3Id"]
+    "order": ["subtask1-id", "subtask2-id", "subtask3-id"]
 }
 ```
 
-### 4.3 Task Time Tracking
+### 4.3 Time Tracking and Watchers
 ```json
-// Update Time Tracking
+// Add time to task
 POST /tasks/{taskId}/time
 {
-    "duration": 120
+    "duration": 120 // minutes
 }
 
-// Add Task Watcher
+// Add yourself as task watcher
 POST /tasks/{taskId}/watchers
+
+// Remove yourself as task watcher
+DELETE /tasks/{taskId}/watchers
 ```
 
-### 4.4 Task Views
+### 4.4 Task Advanced Views
 ```json
-// Get Project Tasks Tree View
+// Get task tree view
 GET /tasks/tree?projectId=projectId
 
-// Get Project Tasks By Status
+// Get tasks grouped by status
 GET /tasks/by-status?projectId=projectId
 
-// Get Project Tasks With Details
+// Get detailed project tasks
 GET /tasks/project/{projectId}/details
 ```
 
-## Testing Best Practices
+## 5. Testing Recommended Sequences
 
-1. **Authentication Flow**:
-   - Save the token received after login
-   - Use the token in the Authorization header for subsequent requests
-   - Test token expiration and logout
+### 5.1 User Registration and Setup
+1. Register an Admin user (first user is automatically admin)
+2. Login as Admin
+3. Update Admin preferences and time settings
+4. Register regular user accounts
 
-2. **Role-Based Access**:
-   - Test with different user roles (admin, member, viewer)
-   - Verify permission restrictions
-   - Test unauthorized access scenarios
+### 5.2 Team Setup
+1. Create a team as Admin
+2. Add team members
+3. Update team member roles
+4. Test team statistics endpoint
 
-3. **Data Validation**:
-   - Test with invalid data formats
-   - Test field length restrictions
-   - Test required field validation
+### 5.3 Project Workflow
+1. Create a project (team or personal)
+2. Add project members
+3. Configure project settings and workflow
+4. Add project tags
+5. Update project member roles
 
-## Common Response Codes
+### 5.4 Task Management Workflow
+1. Create parent tasks
+2. Add subtasks to parent tasks
+3. Update task statuses
+4. Track time on tasks
+5. Add task watchers
+6. Reorder subtasks
+7. Test advanced task views (tree, by-status, details)
 
-```json
-// Success Responses
-201 - Resource Created
-200 - Success
-204 - No Content
-
-// Error Responses
-400 - Validation Error
-401 - Authentication Error
-403 - Authorization Error
-404 - Resource Not Found
-500 - Server Error
-```
-
-## Error Response Format
+## 6. Error Response Format
+All error responses follow this format:
 ```json
 {
-    "error": "Specific error message"
+    "status": "error",
+    "message": "Error description",
+    "errors": [] // Optional array of validation errors
 }
 ```
+
+## 7. Authentication Notes
+- Token expiration: 7 days
+- When token expires, use refresh token endpoint
+- Role-based access control is enforced on endpoints
+- Invalid tokens return 401 Unauthorized
+- Insufficient permissions return 403 Forbidden

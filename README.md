@@ -1,3 +1,154 @@
+# Project Management Application
+
+A comprehensive full-stack project management solution with team collaboration, task tracking, time logging, and file attachment capabilities.
+
+## 📋 Overview
+
+This application provides a complete project management system with the following features:
+- User authentication and authorization
+- Team management
+- Project creation and tracking
+- Task management with assignments
+- Comments and discussions
+- File attachments
+- Time logging and reporting
+
+## 🏗️ Project Structure
+
+```
+project-management/
+├── Backend/                # Node.js/Express backend
+│   ├── config/             # Database configuration
+│   ├── controllers/        # API controllers
+│   ├── middlewares/        # Auth & validation middlewares
+│   ├── models/             # MongoDB schemas
+│   ├── routes/             # API routes
+│   ├── app.js              # Express application setup
+│   └── server.js           # Server entry point
+│
+└── Frontend/               # React/Vite frontend
+    ├── public/             # Static files
+    └── src/                # Source code
+        ├── ani/            # Animations & UI components
+        ├── assets/         # Images and static assets
+        ├── blocks/         # Reusable UI blocks
+        ├── LandingPage/    # Landing page components
+        └── Routes/         # Application routing
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB
+- npm or yarn
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+```bash
+cd Backend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the server:
+```bash
+npm start
+```
+
+The backend server will run at `http://localhost:3000`.
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd Frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+The frontend development server will typically run at `http://localhost:5173`.
+
+## 🔌 API Documentation
+
+Base URL: `http://localhost:3000/api`
+
+The API includes endpoints for:
+
+- **User Management**: Registration, authentication, profile management
+- **Team Management**: Create teams, add/remove members, update team details
+- **Project Management**: Create projects, assign to teams, track progress
+- **Task Management**: Create tasks, assign to users, update status
+- **Comments**: Discussion threads for projects and tasks
+- **Attachments**: Upload and manage files
+- **Time Logging**: Track time spent on tasks and projects
+
+For detailed API endpoint documentation, see the [API Testing Guide](./postman-testing-guide-with-responses.md).
+
+## 🔐 Authentication
+
+The application uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
+
+```
+Authorization: Bearer <your-token>
+```
+
+## 🧪 Testing
+
+For complete testing instructions, refer to:
+- [API Testing Guide](./postman-testing-guide-with-responses.md)
+- [Test Guide](./test-guide.md)
+
+## 💻 Technologies
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- JWT Authentication
+
+### Frontend
+- React 19
+- Vite
+- React Router
+- Framer Motion
+- GSAP (Animations)
+- TailwindCSS
+
+## 📱 Features
+
+- **Responsive Design**: Works on desktop and mobile devices
+- **Real-time Updates**: Instant notifications for changes
+- **Role-based Access Control**: Different permissions for admins and regular users
+- **Advanced Animations**: Smooth, interactive UI experience
+- **Time Tracking**: Log and report time spent on tasks
+- **File Management**: Upload and organize project files
+- **Custom UI Components**: Including animated elements and interactive cards
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the ISC License.
+
 # API Testing Guide
  
 Base URL: `http://localhost:3000/api`
