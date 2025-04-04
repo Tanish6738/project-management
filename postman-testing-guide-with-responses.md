@@ -943,7 +943,7 @@ Content-Type: application/json
     "project": "{{projectId}}",
     "title": "Implement Authentication System",
     "description": "Create login, registration, and user management system",
-    "status": "In Progress",
+    "status": "pending",
     "priority": "high",
     "deadline": "2023-11-30T00:00:00.000Z",
     "tags": ["backend", "auth"]

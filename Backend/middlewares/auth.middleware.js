@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.modal.js';
+import Project from '../models/Project.modal.js';
+import Team from '../models/Team.modal.js';
 
 export const auth = async (req, res, next) => {
     try {
@@ -103,13 +105,29 @@ export const projectAuth = (requiredRole) => {
             const userId = req.user._id;
             
             // Find this user's role in the project
-            const project = await req.app.get('Project').findOne({
+            const project = await Project.findOne({
                 _id: projectId,
-                'members.user': userId
+                $or: [
+                    { owner: userId },
+                    { 'members.user': userId }
+                ]
             });
             
             if (!project) {
                 return res.status(404).json({ error: 'Project not found or user not a member' });
+            }
+            
+            // If user is the owner, they have all permissions
+            if (project.owner.toString() === userId.toString()) {
+                req.projectMember = {
+                    role: 'admin',
+                    permissions: {
+                        canEditTasks: true,
+                        canDeleteTasks: true,
+                        canInviteMembers: true
+                    }
+                };
+                return next();
             }
             
             const member = project.members.find(m => m.user.toString() === userId.toString());
@@ -146,13 +164,24 @@ export const teamAuth = (requiredRole) => {
             const userId = req.user._id;
             
             // Find this user's role in the team
-            const team = await req.app.get('Team').findOne({
+            const team = await Team.findOne({
                 _id: teamId,
-                'members.user': userId
+                $or: [
+                    { owner: userId },
+                    { 'members.user': userId }
+                ]
             });
             
             if (!team) {
                 return res.status(404).json({ error: 'Team not found or user not a member' });
+            }
+            
+            // If user is the owner, they have all permissions
+            if (team.owner && team.owner.toString() === userId.toString()) {
+                req.teamMember = {
+                    role: 'admin'
+                };
+                return next();
             }
             
             const member = team.members.find(m => m.user.toString() === userId.toString());

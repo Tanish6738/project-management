@@ -1,5 +1,6 @@
 import Project from '../models/Project.modal.js';
 import Team from '../models/Team.modal.js';
+import User from '../models/User.modal.js';
 
 export const createProject = async (req, res) => {
     try {
@@ -175,6 +176,12 @@ export const addProjectMember = async (req, res) => {
 
         if (!isAuthorized) {
             return res.status(403).json({ error: 'Not authorized to add members' });
+        }
+
+        // Verify user exists
+        const user = await User.findById(req.body.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
         }
 
         if (project.members.some(member => member.user.equals(req.body.userId))) {
