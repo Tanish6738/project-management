@@ -1,0 +1,85 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnpm-debug.log
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+/dist
+/build
+/out
+/.next
+/.nuxt
+/.output
+
+# Logs
+logs
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+/coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+.pnp/
+.pnp.js
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Uploads and media
+/Backend/uploads/*
+!/Backend/uploads/.gitkeep
+
+# Temporary files
+.temp
+.tmp
+.cache/
+
+# Debug
+.debugger/
+
+# Production bundling
+/Frontend/dist
+/Frontend/build
+/Frontend/public/Videos
+
+# Package manager lock files (uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

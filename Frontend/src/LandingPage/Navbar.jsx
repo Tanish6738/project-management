@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InteractiveHoverButton } from '../App/Elements/HoverButton';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,9 +19,26 @@ const Navbar = () => {
     };
   }, [scrolled]);
 
+  // Smooth scroll function
+  const scrollToSection = (e, sectionId) => {
+    e.preventDefault();
+    setMobileMenuOpen(false); // Close mobile menu if open
+    
+    const section = document.querySelector(sectionId);
+    if (section) {
+      const offsetTop = section.offsetTop;
+      const navbarHeight = 80; // Approximate navbar height
+      
+      window.scrollTo({
+        top: offsetTop - navbarHeight,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   return (
     <nav 
-      className={`fixed w-full top-0 left-0 z-50 transition-all duration-300 ${scrolled ? 'bg-slate-900/95 backdrop-blur-sm shadow-lg' : 'bg-transparent'}`}
+      className={`fixed w-full top-0 left-0 z-50 transition-all duration-300 ${scrolled ? 'bg-black/95 backdrop-blur-sm shadow-lg' : 'bg-transparent'}`}
     >
       <div className="container mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
@@ -30,28 +48,50 @@ const Navbar = () => {
           
           {/* Desktop Menu */}
           <div className="hidden md:flex space-x-8 items-center">
-            <a href="#features" className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide">
+            <a 
+              href="#features" 
+              onClick={(e) => scrollToSection(e, '#features')} 
+              className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide"
+            >
               Features
             </a>
-            <a href="#how-it-works" className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide">
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => scrollToSection(e, '#how-it-works')} 
+              className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide"
+            >
               How It Works
             </a>
-            <a href="#about" className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide">
+            <a 
+              href="#about" 
+              onClick={(e) => scrollToSection(e, '#about')} 
+              className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide"
+            >
               About
             </a>
-            <a href="#pricing" className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide">
+            <a 
+              href="#pricing" 
+              onClick={(e) => scrollToSection(e, '#pricing')} 
+              className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide"
+            >
               Pricing
             </a>
-            <a href="#contact" className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide">
+            <a 
+              href="#contact" 
+              onClick={(e) => scrollToSection(e, '#contact')} 
+              className="text-white/80 hover:text-white transition-colors font-medium text-sm tracking-wide"
+            >
               Contact
             </a>
-            <div className="ml-8 flex space-x-4">
-              <button className="text-white hover:text-slate-200 transition-colors font-medium text-sm">
+            <div className="ml-8 flex space-x-4 items-center">
+              <button className="text-white hover:text-white transition-colors font-medium text-sm">
                 Sign In
               </button>
-              <button className="bg-white text-slate-900 px-5 py-2.5 rounded-md font-medium text-sm hover:bg-slate-100 transition-colors shadow-md hover:shadow-lg">
+              <InteractiveHoverButton 
+                className="bg-white text-black border-white px-5 py-2.5 font-medium text-sm shadow-md hover:shadow-lg"
+              >
                 Get Started
-              </button>
+              </InteractiveHoverButton>
             </div>
           </div>
           
@@ -78,28 +118,50 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 pb-6 space-y-4 flex flex-col animate-fadeIn">
-            <a href="#features" className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-slate-800">
+            <a 
+              href="#features" 
+              onClick={(e) => scrollToSection(e, '#features')} 
+              className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-white/20"
+            >
               Features
             </a>
-            <a href="#how-it-works" className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-slate-800">
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => scrollToSection(e, '#how-it-works')} 
+              className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-white/20"
+            >
               How It Works
             </a>
-            <a href="#about" className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-slate-800">
+            <a 
+              href="#about" 
+              onClick={(e) => scrollToSection(e, '#about')} 
+              className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-white/20"
+            >
               About
             </a>
-            <a href="#pricing" className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-slate-800">
+            <a 
+              href="#pricing" 
+              onClick={(e) => scrollToSection(e, '#pricing')} 
+              className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-white/20"
+            >
               Pricing
             </a>
-            <a href="#contact" className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-slate-800">
+            <a 
+              href="#contact" 
+              onClick={(e) => scrollToSection(e, '#contact')} 
+              className="text-white/80 hover:text-white transition-colors font-medium py-2 border-b border-white/20"
+            >
               Contact
             </a>
             <div className="pt-2 flex flex-col space-y-3">
-              <button className="text-white hover:text-slate-200 transition-colors font-medium py-2">
+              <button className="text-white hover:text-white transition-colors font-medium py-2">
                 Sign In
               </button>
-              <button className="bg-white text-slate-900 py-3 rounded-md font-medium hover:bg-slate-100 transition-colors shadow-md">
+              <InteractiveHoverButton 
+                className="bg-white text-black border-white py-3 font-medium shadow-md w-full"
+              >
                 Get Started
-              </button>
+              </InteractiveHoverButton>
             </div>
           </div>
         )}

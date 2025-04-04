@@ -59,14 +59,14 @@ const Features = () => {
   ];
 
   return (
-    <section id="features" className="py-24 bg-white">
+    <section id="features" className="py-24 bg-black">
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">
             Powerful Features for Modern Teams
           </h2>
-          <div className="h-1 w-20 bg-indigo-500 mx-auto mb-6"></div>
-          <p className="text-lg text-slate-600">
+          <div className="h-1 w-20 bg-white/30 mx-auto mb-6"></div>
+          <p className="text-lg text-white">
             Our platform is packed with features designed to enhance productivity, streamline workflows, and foster collaboration.
           </p>
         </div>
@@ -75,24 +75,24 @@ const Features = () => {
           {featuresList.map((feature, index) => (
             <div 
               key={index} 
-              className="bg-slate-50 rounded-xl p-8 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-100 hover:border-slate-200 group"
+              className="bg-black rounded-xl p-8 shadow-sm hover:shadow-md transition-all duration-300 border border-white/10 hover:border-white/20 group"
             >
-              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6 text-indigo-600 group-hover:bg-indigo-200 transition-all duration-300">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6 text-white group-hover:bg-black border border-white/20 transition-all duration-300">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-3">{feature.title}</h3>
-              <p className="text-slate-600">{feature.description}</p>
+              <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
+              <p className="text-white/70">{feature.description}</p>
             </div>
           ))}
         </div>
         
-        <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-gradient-to-r from-black to-black rounded-2xl overflow-hidden shadow-xl border border-white/10">
           <div className="px-8 py-16 md:p-16 flex flex-col md:flex-row items-center">
             <div className="md:w-2/3 mb-8 md:mb-0 md:pr-12">
               <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
                 Why Choose ProjectFlow?
               </h3>
-              <p className="text-slate-300 mb-6 leading-relaxed">
+              <p className="text-white mb-6 leading-relaxed">
                 ProjectFlow combines powerful project management tools with an intuitive interface, making it the perfect solution for teams of all sizes. From startups to enterprises, our platform scales with your needs.  
               </p>
               <ul className="space-y-3">
@@ -103,16 +103,16 @@ const Features = () => {
                   "Dedicated support team available 24/7"
                 ].map((item, index) => (
                   <li key={index} className="flex items-start">
-                    <svg className="w-5 h-5 text-green-400 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-5 h-5 text-white mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-slate-300">{item}</span>
+                    <span className="text-white">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div className="md:w-1/3 flex justify-center">
-              <button className="bg-white text-slate-900 hover:bg-slate-100 px-8 py-4 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full md:w-auto text-center">
+              <button className="bg-white text-black hover:bg-white/90 px-8 py-4 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full md:w-auto text-center">
                 Start Your Free Trial
               </button>
             </div>

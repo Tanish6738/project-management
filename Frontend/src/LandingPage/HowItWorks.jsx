@@ -44,48 +44,64 @@ const HowItWorks = () => {
     }
   ];
 
+  // Smooth scroll function
+  const scrollToSection = (e, sectionId) => {
+    e.preventDefault();
+    
+    const section = document.querySelector(sectionId);
+    if (section) {
+      const offsetTop = section.offsetTop;
+      const navbarHeight = 80; // Approximate navbar height
+      
+      window.scrollTo({
+        top: offsetTop - navbarHeight,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   return (
-    <section id="how-it-works" className="py-24 bg-slate-50">
+    <section id="how-it-works" className="py-24 bg-black">
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">
             How ProjectFlow Works
           </h2>
-          <div className="h-1 w-20 bg-indigo-500 mx-auto mb-6"></div>
-          <p className="text-lg text-slate-600">
+          <div className="h-1 w-20 bg-white/30 mx-auto mb-6"></div>
+          <p className="text-lg text-white">
             Our streamlined workflow takes you from project kickoff to successful completion in four simple steps.
           </p>
         </div>
         
         <div className="relative">
           {/* Connection line */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500 to-blue-600 hidden lg:block"></div>
+          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/20 to-white/20 hidden lg:block"></div>
           
           <div className="space-y-24">
             {steps.map((step, index) => (
               <div key={index} className="relative">
                 <div className={`flex flex-col lg:flex-row items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}>
                   {/* Step number for mobile */}
-                  <div className="lg:hidden mb-6 flex items-center justify-center w-12 h-12 rounded-full bg-indigo-600 text-white font-bold text-lg shadow-lg">
+                  <div className="lg:hidden mb-6 flex items-center justify-center w-12 h-12 rounded-full bg-black text-white font-bold text-lg shadow-lg border border-white/20">
                     {step.number}
                   </div>
                   
                   <div className="lg:w-1/2 lg:px-12">
-                    <div className={`bg-white p-8 rounded-xl shadow-lg border border-slate-100 ${index % 2 === 0 ? 'lg:mr-12' : 'lg:ml-12'} relative z-10 hover:shadow-xl transition-shadow duration-300`}>
+                    <div className={`bg-black p-8 rounded-xl shadow-lg border border-white/10 ${index % 2 === 0 ? 'lg:mr-12' : 'lg:ml-12'} relative z-10 hover:shadow-xl transition-shadow duration-300`}>
                       <div className="flex items-start mb-4">
-                        <div className="bg-indigo-100 rounded-lg p-3 mr-4 text-indigo-600">
+                        <div className="bg-black rounded-lg p-3 mr-4 text-white border border-white/20">
                           {step.icon}
                         </div>
                         <div>
-                          <h3 className="text-xl font-bold text-slate-900 mb-2">{step.title}</h3>
-                          <p className="text-slate-600">{step.description}</p>
+                          <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
+                          <p className="text-white/70">{step.description}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                   
                   {/* Step number for desktop */}
-                  <div className="hidden lg:flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold text-xl shadow-lg absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+                  <div className="hidden lg:flex items-center justify-center w-16 h-16 rounded-full bg-black text-white font-bold text-xl shadow-lg absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 border border-white/30">
                     {step.number}
                   </div>
                 </div>
@@ -95,7 +111,11 @@ const HowItWorks = () => {
         </div>
         
         <div className="mt-24 text-center">
-          <a href="#pricing" className="inline-flex items-center text-indigo-600 font-medium hover:text-indigo-800 transition-colors">
+          <a 
+            href="#pricing" 
+            onClick={(e) => scrollToSection(e, '#pricing')}
+            className="inline-flex items-center text-white font-medium hover:text-white/80 transition-colors"
+          >
             Ready to get started?
             <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

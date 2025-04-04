@@ -41,32 +41,32 @@ const About = () => {
   ];
 
   return (
-    <section id="about" className="py-24 bg-gradient-to-b from-slate-50 to-white">
+    <section id="about" className="py-24 bg-black">
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">
             About ProjectFlow
           </h2>
-          <div className="h-1 w-20 bg-indigo-500 mx-auto mb-6"></div>
-          <p className="text-lg text-slate-600">
+          <div className="h-1 w-20 bg-white/30 mx-auto mb-6"></div>
+          <p className="text-lg text-white">
             We're on a mission to transform how teams collaborate and deliver projects.
           </p>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
           <div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">Our Mission</h3>
-            <p className="text-slate-600 mb-6 leading-relaxed">
+            <h3 className="text-2xl font-bold text-white mb-6">Our Mission</h3>
+            <p className="text-white mb-6 leading-relaxed">
               At ProjectFlow, our mission is to empower teams with intuitive tools that enhance collaboration, streamline workflows, and drive exceptional results. We believe that when teams work better together, they can achieve remarkable outcomes.
             </p>
-            <p className="text-slate-600 leading-relaxed">
+            <p className="text-white leading-relaxed">
               We're dedicated to creating a platform that adapts to your team's unique needs, eliminating unnecessary complexity and focusing on what truly matters: helping you deliver successful projects on time and within budget.
             </p>
           </div>
           
           <div className="relative">
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-indigo-500/10 rounded-lg z-0"></div>
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-indigo-500/10 rounded-lg z-0"></div>
+            <div className="absolute -top-4 -left-4 w-24 h-24 bg-white/5 rounded-lg z-0"></div>
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/5 rounded-lg z-0"></div>
             <img 
               src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
               alt="Team collaboration" 
@@ -76,30 +76,30 @@ const About = () => {
         </div>
         
         <div className="mb-20">
-          <h3 className="text-2xl font-bold text-slate-900 mb-6 text-center">Our Story</h3>
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
-            <p className="text-slate-600 mb-4 leading-relaxed">
+          <h3 className="text-2xl font-bold text-white mb-6 text-center">Our Story</h3>
+          <div className="bg-black p-8 rounded-xl shadow-sm border border-white/10">
+            <p className="text-white mb-4 leading-relaxed">
               ProjectFlow was born out of frustration with existing project management tools that were either too complex or too simplistic. Our founders, experienced project managers themselves, set out to create a solution that struck the perfect balance between power and usability.
             </p>
-            <p className="text-slate-600 leading-relaxed">
+            <p className="text-white leading-relaxed">
               Since our founding in 2018, we've grown from a small startup to a company serving thousands of teams worldwide. Through continuous innovation and a deep commitment to our users' success, we've built a platform that transforms how teams work together and deliver results.
             </p>
           </div>
         </div>
         
         <div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-8 text-center">Our Values</h3>
+          <h3 className="text-2xl font-bold text-white mb-8 text-center">Our Values</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((value, index) => (
               <div 
                 key={index} 
-                className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:border-indigo-200 transition-all duration-300 hover:shadow-md group"
+                className="bg-black rounded-xl p-6 shadow-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-md group"
               >
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4 text-indigo-600 group-hover:bg-indigo-200 transition-all duration-300">
+                <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-4 text-white group-hover:bg-black/80 transition-all duration-300 border border-white/20">
                   {value.icon}
                 </div>
-                <h4 className="text-xl font-semibold text-slate-900 mb-2">{value.title}</h4>
-                <p className="text-slate-600">{value.description}</p>
+                <h4 className="text-xl font-semibold text-white mb-2">{value.title}</h4>
+                <p className="text-white/70">{value.description}</p>
               </div>
             ))}
           </div>
