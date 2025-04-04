@@ -16,7 +16,8 @@ import {
     getAllUsers,
     updatePreferences,
     manageInvites,
-    updateTimeSettings
+    updateTimeSettings,
+    refreshToken
 } from '../controllers/user.controller.js';
 
 const UserRouter = express.Router();
@@ -25,6 +26,7 @@ const UserRouter = express.Router();
 UserRouter.post('/register', validateRegistration, validate, register);
 UserRouter.post('/login', validateLogin, validate, login);
 UserRouter.post('/logout', auth, logout);
+UserRouter.post('/refresh-token', refreshToken);
 
 // User profile routes
 UserRouter.get('/me', auth, getProfile);

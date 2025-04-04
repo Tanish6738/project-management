@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InteractiveHoverButton } from '../App/Elements/HoverButton';
+import { Link } from 'react-router-dom';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,7 +44,7 @@ const Navbar = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold tracking-tight text-white">ProjectFlow</h1>
+            <Link to="/" className="text-2xl font-bold tracking-tight text-white">ProjectFlow</Link>
           </div>
           
           {/* Desktop Menu */}
@@ -84,14 +85,19 @@ const Navbar = () => {
               Contact
             </a>
             <div className="ml-8 flex space-x-4 items-center">
-              <button className="text-white hover:text-white transition-colors font-medium text-sm">
-                Sign In
-              </button>
-              <InteractiveHoverButton 
-                className="bg-white text-black border-white px-5 py-2.5 font-medium text-sm shadow-md hover:shadow-lg"
+              <Link 
+                to="/login"
+                className="text-white hover:text-white transition-colors font-medium text-sm"
               >
-                Get Started
-              </InteractiveHoverButton>
+                Sign In
+              </Link>
+              <Link to="/register">
+                <InteractiveHoverButton 
+                  className="bg-white text-black border-white py-2 px-4 font-medium shadow-md"
+                >
+                  Get Started
+                </InteractiveHoverButton>
+              </Link>
             </div>
           </div>
           
@@ -154,14 +160,19 @@ const Navbar = () => {
               Contact
             </a>
             <div className="pt-2 flex flex-col space-y-3">
-              <button className="text-white hover:text-white transition-colors font-medium py-2">
-                Sign In
-              </button>
-              <InteractiveHoverButton 
-                className="bg-white text-black border-white py-3 font-medium shadow-md w-full"
+              <Link 
+                to="/login"
+                className="text-white hover:text-white transition-colors font-medium py-2"
               >
-                Get Started
-              </InteractiveHoverButton>
+                Sign In
+              </Link>
+              <Link to="/register">
+                <InteractiveHoverButton 
+                  className="bg-white text-black border-white py-3 font-medium shadow-md w-full"
+                >
+                  Get Started
+                </InteractiveHoverButton>
+              </Link>
             </div>
           </div>
         )}

@@ -37,6 +37,34 @@ export const logout = async (req, res) => {
     }
 };
 
+export const refreshToken = async (req, res) => {
+    try {
+        // Token validation is already done in auth middleware
+        const oldToken = req.header('Authorization')?.replace('Bearer ', '');
+        if (!oldToken) {
+            return res.status(400).json({ error: 'Old token required' });
+        }
+
+        // Verify the token without checking expiration
+        const decoded = jwt.verify(oldToken, process.env.JWT_SECRET, { ignoreExpiration: true });
+        const user = await User.findById(decoded._id);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Remove the old token
+        user.tokens = user.tokens.filter(tokenObj => tokenObj.token !== oldToken);
+        
+        // Generate new token
+        const token = await user.generateAuthToken();
+        
+        res.json({ token, user });
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
+    }
+};
+
 // User Controller Functions
 export const getProfile = async (req, res) => {
     res.json(req.user);
