@@ -97,7 +97,15 @@ const UserSchema = new Schema({
   preferences: {
     notifications: {
       email: { type: Boolean, default: true },
-      push: { type: Boolean, default: true }
+      push: { type: Boolean, default: true },
+      taskAssigned: { type: Boolean, default: true },
+      taskUpdated: { type: Boolean, default: true },
+      taskCompleted: { type: Boolean, default: true },
+      commentAdded: { type: Boolean, default: true },
+      projectCreated: { type: Boolean, default: true },
+      teamUpdates: { type: Boolean, default: true },
+      dailyDigest: { type: Boolean, default: true },
+      weeklyDigest: { type: Boolean, default: true }
     },
     theme: { type: String, default: 'light' },
     language: { type: String, default: 'en' }
@@ -124,6 +132,43 @@ const UserSchema = new Schema({
   workingHours: {
     start: String,
     end: String
+  },
+  workHours: {
+    monday: { 
+      enabled: { type: Boolean, default: true },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    },
+    tuesday: { 
+      enabled: { type: Boolean, default: true },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    },
+    wednesday: { 
+      enabled: { type: Boolean, default: true },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    },
+    thursday: { 
+      enabled: { type: Boolean, default: true },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    },
+    friday: { 
+      enabled: { type: Boolean, default: true },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    },
+    saturday: { 
+      enabled: { type: Boolean, default: false },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    },
+    sunday: { 
+      enabled: { type: Boolean, default: false },
+      start: { type: String, default: '09:00' },
+      end: { type: String, default: '17:00' }
+    }
   },
 
   // Status

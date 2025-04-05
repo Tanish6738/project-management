@@ -17,7 +17,11 @@ import {
     updatePreferences,
     manageInvites,
     updateTimeSettings,
-    refreshToken
+    refreshToken,
+    getNotificationSettings,
+    updateNotificationSettings,
+    getWorkHours,
+    setWorkHours
 } from '../controllers/user.controller.js';
 
 const UserRouter = express.Router();
@@ -36,6 +40,14 @@ UserRouter.delete('/me', auth, deleteUser);
 // User preferences and settings
 UserRouter.put('/preferences', auth, updatePreferences);
 UserRouter.put('/time-settings', auth, updateTimeSettings);
+
+// Notification settings routes
+UserRouter.get('/notifications/settings', auth, getNotificationSettings);
+UserRouter.put('/notifications/settings', auth, updateNotificationSettings);
+
+// Work hours routes
+UserRouter.get('/work-hours', auth, getWorkHours);
+UserRouter.post('/work-hours', auth, setWorkHours);
 
 // Invite management
 UserRouter.post('/invites', auth, manageInvites);

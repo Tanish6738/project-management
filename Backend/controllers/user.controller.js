@@ -223,3 +223,136 @@ export const updateTimeSettings = async (req, res) => {
     }
 };
 
+// New functions for notification settings
+export const getNotificationSettings = async (req, res) => {
+    try {
+        // Check if the user has notification settings defined
+        if (!req.user.preferences || !req.user.preferences.notifications) {
+            return res.json({
+                taskAssigned: true,
+                taskUpdated: true,
+                taskCompleted: true,
+                commentAdded: true,
+                projectCreated: true,
+                teamUpdates: true,
+                dailyDigest: true,
+                weeklyDigest: true
+            });
+        }
+
+        // Return the notification settings from user preferences
+        // If certain settings don't exist, provide defaults
+        const { notifications } = req.user.preferences;
+        
+        res.json({
+            taskAssigned: notifications.taskAssigned !== undefined ? notifications.taskAssigned : true,
+            taskUpdated: notifications.taskUpdated !== undefined ? notifications.taskUpdated : true,
+            taskCompleted: notifications.taskCompleted !== undefined ? notifications.taskCompleted : true,
+            commentAdded: notifications.commentAdded !== undefined ? notifications.commentAdded : true,
+            projectCreated: notifications.projectCreated !== undefined ? notifications.projectCreated : true,
+            teamUpdates: notifications.teamUpdates !== undefined ? notifications.teamUpdates : true,
+            dailyDigest: notifications.dailyDigest !== undefined ? notifications.dailyDigest : true,
+            weeklyDigest: notifications.weeklyDigest !== undefined ? notifications.weeklyDigest : true
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const updateNotificationSettings = async (req, res) => {
+    try {
+        // Update notification settings in user preferences
+        if (!req.user.preferences) {
+            req.user.preferences = {};
+        }
+        
+        if (!req.user.preferences.notifications) {
+            req.user.preferences.notifications = {};
+        }
+        
+        // Update each notification setting
+        const allowedSettings = [
+            'taskAssigned', 'taskUpdated', 'taskCompleted', 'commentAdded',
+            'projectCreated', 'teamUpdates', 'dailyDigest', 'weeklyDigest'
+        ];
+        
+        allowedSettings.forEach(setting => {
+            if (req.body[setting] !== undefined) {
+                req.user.preferences.notifications[setting] = req.body[setting];
+            }
+        });
+        
+        await req.user.save();
+        
+        res.json({
+            message: 'Notification settings updated successfully',
+            settings: req.user.preferences.notifications
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// New functions for work hours
+export const getWorkHours = async (req, res) => {
+    try {
+        // Check if the user has work hours defined
+        if (!req.user.workHours) {
+            // Return default work hours if none are set
+            return res.json({
+                monday: { enabled: true, start: '09:00', end: '17:00' },
+                tuesday: { enabled: true, start: '09:00', end: '17:00' },
+                wednesday: { enabled: true, start: '09:00', end: '17:00' },
+                thursday: { enabled: true, start: '09:00', end: '17:00' },
+                friday: { enabled: true, start: '09:00', end: '17:00' },
+                saturday: { enabled: false, start: '09:00', end: '17:00' },
+                sunday: { enabled: false, start: '09:00', end: '17:00' }
+            });
+        }
+        
+        res.json(req.user.workHours);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const setWorkHours = async (req, res) => {
+    try {
+        // Validate work hours format
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const timeFormat = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        
+        const workHours = req.body;
+        
+        // Validate each day's work hours
+        for (const day of days) {
+            if (!workHours[day]) {
+                return res.status(400).json({ error: `Missing work hours for ${day}` });
+            }
+            
+            const { enabled, start, end } = workHours[day];
+            
+            if (typeof enabled !== 'boolean') {
+                return res.status(400).json({ error: `Invalid enabled value for ${day}` });
+            }
+            
+            if (enabled) {
+                if (!timeFormat.test(start) || !timeFormat.test(end)) {
+                    return res.status(400).json({ error: `Invalid time format for ${day}. Use HH:MM format` });
+                }
+            }
+        }
+        
+        // Update user's work hours
+        req.user.workHours = workHours;
+        await req.user.save();
+        
+        res.json({
+            message: 'Work hours updated successfully',
+            workHours: req.user.workHours
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
