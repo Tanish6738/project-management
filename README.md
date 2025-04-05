@@ -12,6 +12,7 @@ This application provides a complete project management system with the followin
 - Comments and discussions
 - File attachments
 - Time logging and reporting
+- Advanced analytics and reporting
 
 ## 🏗️ Project Structure
 
@@ -30,9 +31,15 @@ project-management/
     ├── public/             # Static files
     └── src/                # Source code
         ├── ani/            # Animations & UI components
+        ├── api/            # API service layer
+        ├── App/            # Main application components
+        │   ├── Context/    # React context providers
+        │   ├── Elements/   # Reusable UI elements
+        │   ├── Layout/     # Layout components
+        │   └── Pages/      # Application pages
         ├── assets/         # Images and static assets
-        ├── blocks/         # Reusable UI blocks
         ├── LandingPage/    # Landing page components
+        ├── lib/            # Utility functions
         └── Routes/         # Application routing
 ```
 
@@ -129,13 +136,79 @@ For complete testing instructions, refer to:
 
 ## 📱 Features
 
+### User Management
+- **User Registration & Authentication**: Secure signup and login with JWT tokens
+- **User Profiles**: Customizable user profiles with avatars, bios, and contact information
+- **Role-Based Access Control**: Different permissions for admins, managers, and regular users
+- **User Preferences**: Personalized settings for notifications, themes, and language
+- **Time Zone Settings**: Configure working hours and time zone for accurate reporting
+- **Invitation System**: Send and manage invitations to join projects or teams
+
+### Team Management
+- **Team Creation & Organization**: Create departments or project-based teams
+- **Team Member Management**: Add, remove, and assign roles to team members
+- **Team Statistics**: Track team performance and productivity metrics
+- **Permission Management**: Configure granular permissions for team members
+- **Team Projects**: Manage multiple projects within a team
+
+### Project Management
+- **Project Creation**: Create personal or team-based projects
+- **Project Workflows**: Customizable project workflows with up to 10 stages
+- **Project Settings**: Configure visibility, notifications, and access permissions
+- **Tags & Categorization**: Organize projects with tags and categories
+- **Project Analytics**: Track project progress, completion rates, and team workload
+- **Project Templates**: Save and reuse project configurations
+- **Project Archiving**: Archive completed projects while preserving data
+
+### Task Management
+- **Task Creation & Assignment**: Create tasks and assign them to team members
+- **Task Hierarchies**: Organize work with parent tasks and subtasks
+- **Task Dependencies**: Set up dependencies between related tasks
+- **Task Prioritization**: Assign priority levels to focus on important work
+- **Deadlines & Reminders**: Set due dates and receive reminders
+- **Task Status Tracking**: Monitor progress through customizable status workflows
+- **Task Watchers**: Subscribe to task updates without being assigned
+- **Advanced Task Views**: Tree view, kanban boards, and status-based grouping
+
+### Comments & Collaboration
+- **Task Comments**: Discuss work directly on task pages
+- **Comment Threads**: Organize discussions with threaded replies
+- **Mentions**: Tag team members to notify them about important information
+- **Rich Text Formatting**: Format comments with markdown-style syntax
+
+### Time Tracking
+- **Time Logging**: Record time spent on tasks manually or with timers
+- **Time Reports**: Generate detailed time reports by user, project, or team
+- **Billable Hours**: Mark time as billable or non-billable
+- **Time Approvals**: Review and approve submitted time entries
+- **Export Options**: Export time data for invoicing or analysis
+
+### File Management
+- **File Attachments**: Upload files to projects and tasks
+- **File Previews**: Preview supported file types directly in the browser
+- **File Organization**: Organize attachments by project or task
+- **Secure Storage**: Safely store and manage access to uploaded files
+
+### Analytics & Reporting
+- **Project Analytics**: Track project progress and completion rates
+- **Team Performance**: Monitor team productivity and workload
+- **Task Distribution**: Analyze task distribution by status and priority
+- **Time Reports**: Generate detailed time usage reports
+- **Custom Dashboards**: Personalized views with relevant metrics
+
+### User Interface
 - **Responsive Design**: Works on desktop and mobile devices
-- **Real-time Updates**: Instant notifications for changes
-- **Role-based Access Control**: Different permissions for admins and regular users
-- **Advanced Animations**: Smooth, interactive UI experience
-- **Time Tracking**: Log and report time spent on tasks
-- **File Management**: Upload and organize project files
-- **Custom UI Components**: Including animated elements and interactive cards
+- **Advanced Animations**: Smooth, interactive UI experiences with GSAP and Framer Motion
+- **Custom UI Components**: Including animated cards, interactive elements
+- **Dark/Light Themes**: Multiple visual themes for comfortable viewing
+- **Accessibility Features**: Designed for keyboard navigation and screen readers
+
+### Security & Auditing
+- **Secure Authentication**: JWT-based authentication with token refresh
+- **Role-Based Access**: Control permissions based on user roles
+- **Audit Logging**: Track important system changes and actions
+- **Data Validation**: Comprehensive input validation and sanitization
+- **Password Security**: Secure password hashing and account recovery
 
 ## 🤝 Contributing
 
