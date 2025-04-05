@@ -1,62 +1,23 @@
 import { useState, useEffect } from 'react';
-import { projectService } from '../../../api';
 import { Link } from 'react-router-dom';
+import { useProject } from '../../Context/ProjectContext';
+import { MagicCard } from '../../Elements/MagicCard';
 
 const ProjectList = () => {
-  const [projects, setProjects] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { projects, loading, error, fetchProjects, createProject } = useProject();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProject, setNewProject] = useState({
-    name: '',
+    title: '',
     description: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    status: 'Planning',
+    priority: 'Medium'
   });
 
   useEffect(() => {
     fetchProjects();
-  }, []);
-
-  const fetchProjects = async () => {
-    try {
-      setIsLoading(true);
-      const response = await projectService.getAllProjects();
-      setProjects(response.data);
-      setError('');
-    } catch (err) {
-      setError('Failed to load projects. Please try again later.');
-      console.error('Error fetching projects:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateProject = async (e) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true);
-      const response = await projectService.createProject(newProject);
-      
-      // Add the new project to the list
-      setProjects([...projects, response.data]);
-      
-      // Reset form and hide it
-      setNewProject({
-        name: '',
-        description: '',
-        startDate: '',
-        endDate: ''
-      });
-      setShowCreateForm(false);
-      setError('');
-    } catch (err) {
-      setError('Failed to create project. Please try again.');
-      console.error('Error creating project:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [fetchProjects]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -66,26 +27,68 @@ const ProjectList = () => {
     }));
   };
 
+  const handleCreateProject = async (e) => {
+    e.preventDefault();
+    try {
+      await createProject(newProject);
+      setNewProject({
+        title: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        status: 'Planning',
+        priority: 'Medium'
+      });
+      setShowCreateForm(false);
+    } catch (err) {
+      console.error('Failed to create project:', err);
+    }
+  };
+
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not specified';
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
 
-  if (isLoading && projects.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
+  const getStatusClass = (status) => {
+    switch (status.toLowerCase()) {
+      case 'planning':
+        return 'bg-blue-100 text-blue-800';
+      case 'in progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'on hold':
+        return 'bg-orange-100 text-orange-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityClass = (priority) => {
+    switch (priority.toLowerCase()) {
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'urgent':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Projects</h2>
+        <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           {showCreateForm ? 'Cancel' : 'Create Project'}
         </button>
@@ -102,14 +105,14 @@ const ProjectList = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Project</h3>
           <form onSubmit={handleCreateProject}>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-                Project Name
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
+                Project Title
               </label>
               <input
                 type="text"
-                id="name"
-                name="name"
-                value={newProject.name}
+                id="title"
+                name="title"
+                value={newProject.title}
                 onChange={handleInputChange}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 required
@@ -156,44 +159,98 @@ const ProjectList = () => {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={newProject.status}
+                  onChange={handleInputChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="Planning">Planning</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="priority">
+                  Priority
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  value={newProject.priority}
+                  onChange={handleInputChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
             <div className="flex items-center justify-end">
               <button
                 type="submit"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                disabled={isLoading}
+                disabled={loading}
               >
-                {isLoading ? 'Creating...' : 'Create Project'}
+                {loading ? 'Creating...' : 'Create Project'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {projects.length === 0 ? (
-        <div className="text-center py-10 bg-white shadow-md rounded-md">
-          <h3 className="text-lg font-medium text-gray-500">No projects found</h3>
-          <p className="mt-2 text-sm text-gray-400">Start by creating a new project</p>
+      {loading && !showCreateForm ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
-            <div key={project._id} className="bg-white shadow-md rounded-md overflow-hidden">
+            <MagicCard 
+              key={project._id} 
+              className="bg-white shadow-md rounded-md overflow-hidden"
+              gradientFrom="rgba(79, 70, 229, 0.2)" 
+              gradientTo="rgba(129, 140, 248, 0.2)"
+              gradientOpacity={0.1}
+            >
               <div className="p-6">
-                <h3 className="text-lg font-medium text-indigo-600 mb-2">{project.name}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description || 'No description provided'}</p>
+                <h3 className="text-lg font-medium text-indigo-600 mb-2">{project.title}</h3>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {project.description || 'No description provided'}
+                </p>
+                
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className={`${getStatusClass(project.status)} px-2 py-1 text-xs font-semibold rounded-full`}>
+                    {project.status}
+                  </span>
+                  <span className={`${getPriorityClass(project.priority)} px-2 py-1 text-xs font-semibold rounded-full`}>
+                    {project.priority}
+                  </span>
+                </div>
+                
                 <div className="text-sm text-gray-500 mb-4">
-                  <div className="flex justify-between mb-1">
+                  <div className="flex justify-between mb-2">
                     <span>Start:</span>
                     <span>{formatDate(project.startDate)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Due:</span>
+                    <span>Deadline:</span>
                     <span>{formatDate(project.endDate)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">
-                    {project.tasks?.length || 0} tasks
+                    {project.teams?.length || 0} teams
                   </span>
                   <Link
                     to={`/projects/${project._id}`}
@@ -203,7 +260,7 @@ const ProjectList = () => {
                   </Link>
                 </div>
               </div>
-            </div>
+            </MagicCard>
           ))}
         </div>
       )}

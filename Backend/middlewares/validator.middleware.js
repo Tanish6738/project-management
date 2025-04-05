@@ -420,8 +420,12 @@ export const validateTaskFilters = [
         .withMessage('Invalid priority'),
     query('assignedTo')
         .optional()
-        .isMongoId()
-        .withMessage('Invalid user ID format')
+        .custom(value => {
+            if (value === 'me' || mongoose.Types.ObjectId.isValid(value)) {
+                return true;
+            }
+            throw new Error('assignedTo must be either "me" or a valid user ID');
+        })
 ];
 
 // General validation result handler

@@ -53,12 +53,18 @@ export const getAllTasks = async (req, res) => {
         if (project) query.project = project;
         if (status) query.status = status;
         if (priority) query.priority = priority;
-        if (assignedTo) query.assignedTo = assignedTo;
+        if (assignedTo === 'me') {
+            query.assignedTo = req.user._id;
+        } else if (assignedTo) {
+            query.assignedTo = assignedTo;
+        }
 
         const tasks = await Task.find(query)
             .populate('assignedTo', 'name email')
             .populate('createdBy', 'name')
-            .populate('parentTask', 'title');
+            .populate('parentTask', 'title')
+            .populate('project', 'title')
+            .sort({ createdAt: -1 });
 
         res.json(tasks);
     } catch (error) {
@@ -718,4 +724,21 @@ const areArraysEqual = (a, b) => {
         if (a[i] !== b[i]) return false;
     }
     return true;
+};
+
+export const getUserTasks = async (req, res) => {
+    try {
+        // Find all tasks assigned to the current user
+        const tasks = await Task.find({ 
+            assignedTo: req.user._id 
+        })
+        .populate('project', 'title')
+        .populate('assignedTo', 'name email avatar')
+        .populate('createdBy', 'name email')
+        .sort({ createdAt: -1 });
+
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };

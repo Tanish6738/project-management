@@ -1,6 +1,7 @@
 import Project from '../models/Project.modal.js';
 import Team from '../models/Team.modal.js';
 import User from '../models/User.modal.js';
+import mongoose from 'mongoose';
 
 export const createProject = async (req, res) => {
     try {
@@ -370,5 +371,87 @@ export const manageProjectTags = async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+};
+
+export const getProjectStats = async (req, res) => {
+    try {
+        const projectId = req.params.projectId;
+        const project = await Project.findById(projectId);
+        
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Check user has access to this project
+        const isMember = project.members.some(member => 
+            member.user.equals(req.user._id)
+        );
+
+        if (!isMember && !project.owner.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Not authorized to view project stats' });
+        }
+
+        // Get all tasks related to this project
+        const Task = mongoose.model('Task');
+        const tasks = await Task.find({ project: projectId });
+        
+        // Calculate stats
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(task => task.status === 'Done').length;
+        const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        
+        // Calculate days remaining if end date exists
+        let daysRemaining = null;
+        if (project.endDate) {
+            const endDate = new Date(project.endDate);
+            const today = new Date();
+            const timeDiff = endDate - today;
+            daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            // If project is overdue, show negative days
+            if (daysRemaining < 0) {
+                daysRemaining = `${Math.abs(daysRemaining)} (overdue)`;
+            }
+        }
+
+        // Count unique team members
+        const teamMembers = new Set();
+        project.members.forEach(member => {
+            teamMembers.add(member.user.toString());
+        });
+        
+        const totalTeamMembers = teamMembers.size;
+
+        // Calculate task distribution by status
+        const taskByStatus = {};
+        tasks.forEach(task => {
+            if (!taskByStatus[task.status]) {
+                taskByStatus[task.status] = 0;
+            }
+            taskByStatus[task.status]++;
+        });
+
+        // Calculate task distribution by priority
+        const taskByPriority = {};
+        tasks.forEach(task => {
+            if (!taskByPriority[task.priority]) {
+                taskByPriority[task.priority] = 0;
+            }
+            taskByPriority[task.priority]++;
+        });
+
+        // Return stats
+        res.json({
+            totalTasks,
+            completedTasks,
+            completionRate,
+            daysRemaining,
+            totalTeamMembers,
+            taskByStatus,
+            taskByPriority
+        });
+    } catch (error) {
+        console.error('Error getting project stats:', error);
+        res.status(500).json({ error: error.message });
     }
 };

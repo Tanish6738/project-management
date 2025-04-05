@@ -22,7 +22,8 @@ import {
     updateProjectMemberRole,
     updateProjectSettings,
     updateProjectWorkflow,
-    manageProjectTags
+    manageProjectTags,
+    getProjectStats
 } from '../controllers/project.controller.js';
 
 const ProjectRouter = express.Router();
@@ -44,5 +45,8 @@ ProjectRouter.patch('/:projectId/members/:userId/role', auth, projectAuth('admin
 ProjectRouter.put('/:projectId/settings', auth, projectAuth('admin'), validateProjectSettings, validate, updateProjectSettings);
 ProjectRouter.put('/:projectId/workflow', auth, projectAuth('admin'), validateProjectWorkflow, validate, updateProjectWorkflow);
 ProjectRouter.post('/:projectId/tags', auth, projectAuth('editor'), validateProjectTags, validate, manageProjectTags);
+
+// Project statistics and analytics routes
+ProjectRouter.get('/:projectId/stats', auth, getProjectStats);
 
 export default ProjectRouter;

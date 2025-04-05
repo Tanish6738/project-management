@@ -26,7 +26,8 @@ import {
     removeTaskWatcher,
     getTaskTreeView,
     getTasksByStatus,
-    getProjectTasksDetails
+    getProjectTasksDetails,
+    getUserTasks
 } from '../controllers/task.controller.js';
 
 const TaskRouter = express.Router();
@@ -34,12 +35,22 @@ const TaskRouter = express.Router();
 // Basic task operations
 TaskRouter.post('/', auth, validateTaskCreation, validate, createTask);
 TaskRouter.get('/', auth, validateTaskFilters, getAllTasks);
+
+// User-specific tasks
+TaskRouter.get('/assigned-to-me', auth, getUserTasks);
+
+// Advanced task views
+TaskRouter.get('/tree', auth, getTaskTreeView);
+TaskRouter.get('/by-status', auth, getTasksByStatus);
+
+// Routes with path parameters
 TaskRouter.get('/:taskId', auth, getTaskDetails);
 TaskRouter.put('/:taskId', auth, validateTaskUpdate, validate, updateTask);
 TaskRouter.delete('/:taskId', auth, deleteTask);
 
 // Project-specific task operations
 TaskRouter.get('/project/:projectId', auth, getTasksByProject);
+TaskRouter.get('/project/:projectId/details', auth, getProjectTasksDetails);
 
 // Subtask operations
 TaskRouter.get('/:taskId/subtasks', auth, getSubtasks);
@@ -54,10 +65,5 @@ TaskRouter.post('/:taskId/time', auth, validateTimeTracking, validate, addTimeTo
 // Task watchers
 TaskRouter.post('/:taskId/watchers', auth, addTaskWatcher);
 TaskRouter.delete('/:taskId/watchers', auth, removeTaskWatcher);
-
-// Advanced task views
-TaskRouter.get('/tree', auth, getTaskTreeView);
-TaskRouter.get('/by-status', auth, getTasksByStatus);
-TaskRouter.get('/project/:projectId/details', auth, getProjectTasksDetails);
 
 export default TaskRouter;

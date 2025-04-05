@@ -7,6 +7,9 @@ import ProjectList from '../App/Pages/Projects/ProjectList';
 import ProjectDetail from '../App/Pages/Projects/ProjectDetail';
 import Landing from '../LandingPage/Landing';
 import AppLayout from '../App/Layout/AppLayout';
+import TeamList from '../App/Pages/Teams/TeamList';
+import TeamDetail from '../App/Pages/Teams/TeamDetail';
+import TaskDetail from '../App/Pages/Tasks/TaskDetail';
 
 // Protected route component that includes layout
 const ProtectedRoute = ({ children }) => {
@@ -74,6 +77,30 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ProjectDetail />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/teams" 
+        element={
+          <ProtectedRoute>
+            <TeamList />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/teams/:teamId" 
+        element={
+          <ProtectedRoute>
+            <TeamDetail />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/tasks/:taskId" 
+        element={
+          <ProtectedRoute>
+            <TaskDetail />
           </ProtectedRoute>
         } 
       />
