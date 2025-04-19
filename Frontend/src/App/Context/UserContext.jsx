@@ -148,6 +148,34 @@ export const UserProvider = ({ children }) => {
       (Array.isArray(user.roles) && user.roles.includes(role));
   };
 
+  const fetchUserNotifications = async () => {
+    try {
+      setIsLoading(true);
+      const response = await userService.getNotifications();
+      return response.data;
+    } catch (err) {
+      setError(err.message || 'Failed to fetch notifications');
+      console.error('Error fetching notifications:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      setIsLoading(true);
+      const response = await userService.markNotificationRead(notificationId);
+      return response.data;
+    } catch (err) {
+      setError(err.message || 'Failed to mark notification as read');
+      console.error('Error marking notification as read:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -161,7 +189,9 @@ export const UserProvider = ({ children }) => {
         updateProfile,
         updatePreferences,
         fetchUserProfile,
-        hasRole
+        hasRole,
+        fetchUserNotifications,
+        markNotificationAsRead
       }}
     >
       {children}

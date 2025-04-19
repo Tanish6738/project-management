@@ -17,7 +17,10 @@ const ProjectDetail = () => {
     deleteProject,
     addTeamToProject,
     removeTeamFromProject,
-    getProjectStats
+    getProjectStats,
+    updateProjectSettings,
+    updateProjectWorkflow,
+    manageProjectTags
   } = useProject();
   const { projectTasks, fetchProjectTasks, createTask } = useTask();
   const { teams, fetchTeams } = useTeam();
@@ -30,12 +33,19 @@ const ProjectDetail = () => {
   const [showAddTaskForm, setShowAddTaskForm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [projectStats, setProjectStats] = useState(null);
+  const [showSettingsForm, setShowSettingsForm] = useState(false);
+  const [showWorkflowForm, setShowWorkflowForm] = useState(false);
+  const [editedSettings, setEditedSettings] = useState(null);
+  const [editedWorkflow, setEditedWorkflow] = useState([]);
+  const [newWorkflowStep, setNewWorkflowStep] = useState('');
+  const [showTagsForm, setShowTagsForm] = useState(false);
+  const [newTag, setNewTag] = useState('');
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     dueDate: '',
-    priority: 'Medium',
-    status: 'Todo'
+    priority: 'medium',
+    status: 'To Do'
   });
 
   // Fetch project details when component mounts or projectId changes
@@ -53,11 +63,22 @@ const ProjectDetail = () => {
       setEditedProject({
         title: currentProject.title,
         description: currentProject.description || '',
-        startDate: currentProject.startDate ? new Date(currentProject.startDate).toISOString().split('T')[0] : '',
-        endDate: currentProject.endDate ? new Date(currentProject.endDate).toISOString().split('T')[0] : '',
-        status: currentProject.status,
-        priority: currentProject.priority
+        dueDate: currentProject.dueDate ? new Date(currentProject.dueDate).toISOString().split('T')[0] : '',
+        status: currentProject.status || 'active',
+        priority: currentProject.priority || 'medium'
       });
+
+      setEditedSettings(currentProject.settings || {
+        visibility: 'private',
+        allowComments: true,
+        allowGuestAccess: false,
+        notifications: {
+          enabled: true,
+          frequency: 'daily'
+        }
+      });
+
+      setEditedWorkflow(currentProject.workflow || ['To Do', 'In Progress', 'Review', 'Done']);
     }
   }, [currentProject]);
 
@@ -73,8 +94,9 @@ const ProjectDetail = () => {
   // Filter teams to show only those not already assigned to the project
   useEffect(() => {
     if (teams.length > 0 && currentProject) {
-      const projectTeamIds = currentProject.teams?.map(team => team._id) || [];
-      const filteredTeams = teams.filter(team => !projectTeamIds.includes(team._id));
+      // If project is team type and has a team, filter out that team
+      const teamId = currentProject.team?._id || currentProject.team;
+      const filteredTeams = teams.filter(team => team._id !== teamId);
       setAvailableTeams(filteredTeams);
     }
   }, [teams, currentProject]);
@@ -96,6 +118,89 @@ const ProjectDetail = () => {
     }));
   };
 
+  const handleSettingsChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (name.includes('.')) {
+      // Handle nested properties (e.g., notifications.enabled)
+      const [parent, child] = name.split('.');
+      setEditedSettings(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: type === 'checkbox' ? checked : value
+        }
+      }));
+    } else {
+      setEditedSettings(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
+  };
+
+  const handleAddWorkflowStep = () => {
+    if (newWorkflowStep.trim() && !editedWorkflow.includes(newWorkflowStep)) {
+      setEditedWorkflow([...editedWorkflow, newWorkflowStep]);
+      setNewWorkflowStep('');
+    }
+  };
+
+  const handleRemoveWorkflowStep = (step) => {
+    setEditedWorkflow(editedWorkflow.filter(s => s !== step));
+  };
+
+  const handleWorkflowChange = (oldStep, newStep) => {
+    if (newStep.trim() && !editedWorkflow.includes(newStep)) {
+      setEditedWorkflow(editedWorkflow.map(step => 
+        step === oldStep ? newStep : step
+      ));
+    }
+  };
+
+  const handleMoveWorkflowStep = (index, direction) => {
+    if (
+      (direction === 'up' && index > 0) || 
+      (direction === 'down' && index < editedWorkflow.length - 1)
+    ) {
+      const newWorkflow = [...editedWorkflow];
+      const currentStep = newWorkflow[index];
+      
+      if (direction === 'up') {
+        newWorkflow[index] = newWorkflow[index - 1];
+        newWorkflow[index - 1] = currentStep;
+      } else {
+        newWorkflow[index] = newWorkflow[index + 1];
+        newWorkflow[index + 1] = currentStep;
+      }
+      
+      setEditedWorkflow(newWorkflow);
+    }
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && (!currentProject.tags || !currentProject.tags.includes(newTag))) {
+      manageProjectTags(projectId, { action: 'add', tags: [newTag] })
+        .then(() => {
+          setNewTag('');
+          toast.success('Tag added successfully');
+        })
+        .catch(() => {
+          toast.error('Failed to add tag');
+        });
+    }
+  };
+
+  const handleRemoveTag = (tag) => {
+    manageProjectTags(projectId, { action: 'remove', tags: [tag] })
+      .then(() => {
+        toast.success('Tag removed successfully');
+      })
+      .catch(() => {
+        toast.error('Failed to remove tag');
+      });
+  };
+
   const handleTaskInputChange = (e) => {
     const { name, value } = e.target;
     setNewTask(prev => ({
@@ -109,8 +214,31 @@ const ProjectDetail = () => {
     try {
       await updateProject(projectId, editedProject);
       setIsEditing(false);
+      toast.success('Project updated successfully');
     } catch (err) {
       toast.error('Failed to update project');
+    }
+  };
+
+  const handleUpdateSettings = async (e) => {
+    e.preventDefault();
+    try {
+      await updateProjectSettings(projectId, editedSettings);
+      setShowSettingsForm(false);
+      toast.success('Project settings updated successfully');
+    } catch (err) {
+      toast.error('Failed to update project settings');
+    }
+  };
+
+  const handleUpdateWorkflow = async (e) => {
+    e.preventDefault();
+    try {
+      await updateProjectWorkflow(projectId, { workflow: editedWorkflow });
+      setShowWorkflowForm(false);
+      toast.success('Project workflow updated successfully');
+    } catch (err) {
+      toast.error('Failed to update project workflow');
     }
   };
 
@@ -138,6 +266,7 @@ const ProjectDetail = () => {
       await addTeamToProject(projectId, selectedTeamId);
       setSelectedTeamId('');
       setShowAddTeamForm(false);
+      toast.success('Team added to project');
     } catch (err) {
       toast.error('Failed to add team to project');
     }
@@ -147,6 +276,7 @@ const ProjectDetail = () => {
     if (window.confirm('Are you sure you want to remove this team from the project?')) {
       try {
         await removeTeamFromProject(projectId, teamId);
+        toast.success('Team removed from project');
       } catch (err) {
         toast.error('Failed to remove team from project');
       }
@@ -158,33 +288,37 @@ const ProjectDetail = () => {
     try {
       const taskData = {
         ...newTask,
-        projectId
+        project: projectId
       };
       await createTask(taskData);
       setNewTask({
         title: '',
         description: '',
         dueDate: '',
-        priority: 'Medium',
-        status: 'Todo'
+        priority: 'medium',
+        status: 'To Do'
       });
       setShowAddTaskForm(false);
       // Refresh tasks after creating a new one
       fetchProjectTasks(projectId);
+      toast.success('Task created successfully');
     } catch (err) {
       toast.error('Failed to create task');
     }
   };
 
   const getStatusClass = (status) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
       case 'planning':
+      case 'active':
         return 'bg-blue-100 text-blue-800';
       case 'in progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
         return 'bg-green-100 text-green-800';
       case 'on hold':
+      case 'archived':
         return 'bg-orange-100 text-orange-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
@@ -194,6 +328,7 @@ const ProjectDetail = () => {
   };
 
   const getPriorityClass = (priority) => {
+    if (!priority) return 'bg-gray-100 text-gray-800';
     switch (priority.toLowerCase()) {
       case 'low':
         return 'bg-green-100 text-green-800';
@@ -288,41 +423,352 @@ const ProjectDetail = () => {
               
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className={`${getStatusClass(currentProject.status)} px-2 py-1 text-sm font-semibold rounded-full`}>
-                  {currentProject.status}
+                  {currentProject.status || 'active'}
                 </span>
                 <span className={`${getPriorityClass(currentProject.priority)} px-2 py-1 text-sm font-semibold rounded-full`}>
-                  {currentProject.priority}
+                  {currentProject.priority || 'medium'}
+                </span>
+                <span className="bg-gray-100 text-gray-800 px-2 py-1 text-sm font-semibold rounded-full">
+                  {currentProject.projectType === 'team' ? 'Team Project' : 'Personal Project'}
                 </span>
               </div>
+
+              {currentProject.tags && currentProject.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {currentProject.tags.map(tag => (
+                    <span 
+                      key={tag} 
+                      className="bg-indigo-100 text-indigo-800 px-2 py-1 text-xs rounded-full flex items-center"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 text-indigo-600 hover:text-indigo-800"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    onClick={() => setShowTagsForm(!showTagsForm)}
+                    className="bg-white border border-indigo-300 text-indigo-600 px-2 py-1 text-xs rounded-full hover:bg-indigo-50"
+                  >
+                    + Add Tag
+                  </button>
+                </div>
+              )}
+
+              {showTagsForm && (
+                <div className="mb-4 flex items-center">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    placeholder="Enter tag"
+                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+                  />
+                  <button
+                    onClick={handleAddTag}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => setShowTagsForm(false)}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               
               <p className="text-gray-600 mb-4">{currentProject.description || 'No description provided'}</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-gray-50 p-4 rounded-md">
+                  <h4 className="font-medium text-gray-700 mb-2">Project Details</h4>
                   <div className="text-sm text-gray-500">
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium">Start Date:</span>
-                      <span>{currentProject.startDate ? new Date(currentProject.startDate).toLocaleDateString() : 'Not set'}</span>
+                      <span>Owner:</span>
+                      <span>{currentProject.owner?.name || 'Not set'}</span>
+                    </div>
+                    {currentProject.team && (
+                      <div className="flex justify-between mb-2">
+                        <span>Team:</span>
+                        <span>{currentProject.team?.name || 'Not set'}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between mb-2">
+                      <span>Due Date:</span>
+                      <span>{currentProject.dueDate ? new Date(currentProject.dueDate).toLocaleDateString() : 'Not set'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-medium">End Date:</span>
-                      <span>{currentProject.endDate ? new Date(currentProject.endDate).toLocaleDateString() : 'Not set'}</span>
+                      <span>Created:</span>
+                      <span>{currentProject.createdAt ? new Date(currentProject.createdAt).toLocaleDateString() : 'Not set'}</span>
                     </div>
                   </div>
                 </div>
+                
                 <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="flex justify-between mb-2">
+                    <h4 className="font-medium text-gray-700">Settings</h4>
+                    <button
+                      onClick={() => setShowSettingsForm(!showSettingsForm)}
+                      className="text-indigo-600 hover:text-indigo-800 text-xs"
+                    >
+                      Edit Settings
+                    </button>
+                  </div>
                   <div className="text-sm text-gray-500">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">Teams:</span>
-                      <span>{currentProject.teams?.length || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Tasks:</span>
-                      <span>{projectTasks.length}</span>
-                    </div>
+                    {currentProject.settings ? (
+                      <>
+                        <div className="flex justify-between mb-2">
+                          <span>Visibility:</span>
+                          <span className="capitalize">{currentProject.settings.visibility || 'private'}</span>
+                        </div>
+                        <div className="flex justify-between mb-2">
+                          <span>Allow Comments:</span>
+                          <span>{currentProject.settings.allowComments ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div className="flex justify-between mb-2">
+                          <span>Guest Access:</span>
+                          <span>{currentProject.settings.allowGuestAccess ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Notifications:</span>
+                          <span>{currentProject.settings.notifications?.enabled ? 
+                            currentProject.settings.notifications.frequency : 'Disabled'}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p>No settings configured</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="flex justify-between mb-2">
+                    <h4 className="font-medium text-gray-700">Workflow</h4>
+                    <button
+                      onClick={() => setShowWorkflowForm(!showWorkflowForm)}
+                      className="text-indigo-600 hover:text-indigo-800 text-xs"
+                    >
+                      Edit Workflow
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {currentProject.workflow && currentProject.workflow.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {currentProject.workflow.map((step, i) => (
+                          <span key={i} className="bg-white border border-gray-200 rounded px-2 py-1 text-xs">
+                            {step}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>No workflow defined</p>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {showSettingsForm && (
+                <div className="mt-4 mb-6 bg-gray-50 p-4 rounded-md">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Edit Project Settings</h3>
+                  <form onSubmit={handleUpdateSettings}>
+                    <div className="mb-4">
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="visibility">
+                        Visibility
+                      </label>
+                      <select
+                        id="visibility"
+                        name="visibility"
+                        value={editedSettings.visibility || 'private'}
+                        onChange={handleSettingsChange}
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      >
+                        <option value="private">Private</option>
+                        <option value="public">Public</option>
+                        <option value="team">Team Only</option>
+                      </select>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="flex items-center mb-2">
+                        <input
+                          id="allowComments"
+                          name="allowComments"
+                          type="checkbox"
+                          checked={editedSettings.allowComments}
+                          onChange={handleSettingsChange}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="allowComments" className="ml-2 block text-sm text-gray-700">
+                          Allow Comments
+                        </label>
+                      </div>
+
+                      <div className="flex items-center">
+                        <input
+                          id="allowGuestAccess"
+                          name="allowGuestAccess"
+                          type="checkbox"
+                          checked={editedSettings.allowGuestAccess}
+                          onChange={handleSettingsChange}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="allowGuestAccess" className="ml-2 block text-sm text-gray-700">
+                          Allow Guest Access
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <h4 className="text-sm font-bold text-gray-700 mb-2">Notifications</h4>
+                      
+                      <div className="flex items-center mb-2">
+                        <input
+                          id="notificationsEnabled"
+                          name="notifications.enabled"
+                          type="checkbox"
+                          checked={editedSettings.notifications?.enabled}
+                          onChange={handleSettingsChange}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="notificationsEnabled" className="ml-2 block text-sm text-gray-700">
+                          Enable Notifications
+                        </label>
+                      </div>
+
+                      {editedSettings.notifications?.enabled && (
+                        <div className="mt-2">
+                          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="notificationsFrequency">
+                            Notification Frequency
+                          </label>
+                          <select
+                            id="notificationsFrequency"
+                            name="notifications.frequency"
+                            value={editedSettings.notifications.frequency || 'daily'}
+                            onChange={handleSettingsChange}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                          >
+                            <option value="instant">Instant</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowSettingsForm(false)}
+                        className="mr-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                      >
+                        Save Settings
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {showWorkflowForm && (
+                <div className="mt-4 mb-6 bg-gray-50 p-4 rounded-md">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Edit Project Workflow</h3>
+                  <form onSubmit={handleUpdateWorkflow}>
+                    <div className="mb-4">
+                      <label className="block text-gray-700 text-sm font-bold mb-2">
+                        Workflow Steps
+                      </label>
+                      <ul className="mb-4">
+                        {editedWorkflow.map((step, index) => (
+                          <li key={index} className="flex items-center mb-2">
+                            <input
+                              type="text"
+                              value={step}
+                              onChange={(e) => handleWorkflowChange(step, e.target.value)}
+                              className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2 flex-grow"
+                            />
+                            <div className="flex space-x-1">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveWorkflowStep(index, 'up')}
+                                disabled={index === 0}
+                                className={`p-1 rounded ${index === 0 ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-200'}`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveWorkflowStep(index, 'down')}
+                                disabled={index === editedWorkflow.length - 1}
+                                className={`p-1 rounded ${index === editedWorkflow.length - 1 ? 'text-gray-300' : 'text-gray-600 hover:bg-gray-200'}`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveWorkflowStep(step)}
+                                className="p-1 rounded text-red-500 hover:bg-red-100"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      
+                      <div className="flex items-center">
+                        <input
+                          type="text"
+                          value={newWorkflowStep}
+                          onChange={(e) => setNewWorkflowStep(e.target.value)}
+                          placeholder="New workflow step"
+                          className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddWorkflowStep}
+                          className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
+                        >
+                          Add Step
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowWorkflowForm(false)}
+                        className="mr-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                      >
+                        Save Workflow
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               {projectStats && (
                 <div className="bg-indigo-50 p-4 rounded-md mb-4">
@@ -383,50 +829,17 @@ const ProjectDetail = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="startDate">
-                    Start Date
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dueDate">
+                    Due Date
                   </label>
                   <input
                     type="date"
-                    id="startDate"
-                    name="startDate"
-                    value={editedProject.startDate}
+                    id="dueDate"
+                    name="dueDate"
+                    value={editedProject.dueDate}
                     onChange={handleInputChange}
                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="endDate">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    id="endDate"
-                    name="endDate"
-                    value={editedProject.endDate}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
-                    Status
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={editedProject.status}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  >
-                    <option value="Planning">Planning</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="On Hold">On Hold</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
                 </div>
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="priority">
@@ -439,10 +852,28 @@ const ProjectDetail = () => {
                     onChange={handleInputChange}
                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={editedProject.status}
+                    onChange={handleInputChange}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  >
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                    <option value="completed">Completed</option>
                   </select>
                 </div>
               </div>
@@ -467,75 +898,52 @@ const ProjectDetail = () => {
         </div>
       </div>
 
-      {/* Teams Section */}
+      {/* Members Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Teams</h2>
-          {availableTeams.length > 0 && (
-            <button
-              onClick={() => setShowAddTeamForm(!showAddTeamForm)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              {showAddTeamForm ? 'Cancel' : 'Add Team'}
-            </button>
-          )}
+          <h2 className="text-xl font-bold text-gray-800">Project Members</h2>
         </div>
 
-        {showAddTeamForm && (
-          <div className="bg-white shadow-md rounded-md p-6 mb-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add Team to Project</h3>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="teamId">
-                Select Team
-              </label>
-              <select
-                id="teamId"
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              >
-                <option value="">-- Select a team --</option>
-                {availableTeams.map(team => (
-                  <option key={team._id} value={team._id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleAddTeam}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                disabled={!selectedTeamId || loading}
-              >
-                {loading ? 'Adding...' : 'Add Team'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentProject.teams && currentProject.teams.length === 0 ? (
+        {!currentProject.members || currentProject.members.length === 0 ? (
           <div className="bg-white shadow-md rounded-md p-6 text-center text-gray-500">
-            No teams assigned to this project yet.
+            No members assigned to this project.
           </div>
         ) : (
           <div className="bg-white shadow-md rounded-md overflow-hidden">
             <ul className="divide-y divide-gray-200">
-              {currentProject.teams && currentProject.teams.map((team) => (
-                <li key={team._id} className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{team.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{team.teamType} · {team.members?.length || 0} members</p>
+              {currentProject.members.map((member) => (
+                <li key={member._id} className="p-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    {member.user?.avatar ? (
+                      <img src={member.user.avatar} alt={member.user.name} className="h-8 w-8 rounded-full mr-3" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                        <span className="text-indigo-800 font-medium text-sm">
+                          {member.user?.name?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{member.user?.name || 'Unknown User'}</p>
+                      <div className="flex items-center">
+                        <span className="text-xs text-gray-500 capitalize">{member.role}</span>
+                        {member.addedBy && member.addedBy !== member.user?._id && (
+                          <span className="text-xs text-gray-400 ml-2">
+                            Added by {currentProject.members.find(m => m.user?._id === member.addedBy)?.user?.name || 'Unknown'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleRemoveTeam(team._id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center">
+                    {member.role !== 'admin' && (
+                      <button className="text-red-600 hover:text-red-800 mr-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -611,10 +1019,10 @@ const ProjectDetail = () => {
                     onChange={handleTaskInputChange}
                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
                   </select>
                 </div>
                 <div>
@@ -628,10 +1036,9 @@ const ProjectDetail = () => {
                     onChange={handleTaskInputChange}
                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   >
-                    <option value="Todo">Todo</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Review">Review</option>
-                    <option value="Done">Done</option>
+                    {(currentProject.workflow || ['To Do', 'In Progress', 'Review', 'Done']).map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
                   </select>
                 </div>
               </div>

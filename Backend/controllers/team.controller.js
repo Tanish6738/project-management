@@ -18,15 +18,33 @@ export const createTeam = async (req, res) => {
             }]
         });
         await team.save();
-        
-        // Update the user's teams array
         await User.findByIdAndUpdate(
             req.user._id,
             { $addToSet: { teams: team._id } },
             { new: true }
         );
-
-        res.status(201).json(team);
+        // Populate owner and members for response
+        await team.populate('owner', 'name email');
+        await team.populate('members.user', 'name email');
+        res.status(201).json({
+            _id: team._id,
+            name: team.name,
+            description: team.description,
+            teamType: team.teamType,
+            owner: team.owner._id,
+            maxMembers: team.maxMembers,
+            members: team.members.map(m => ({
+                user: m.user._id,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            isActive: team.isActive,
+            createdAt: team.createdAt,
+            updatedAt: team.updatedAt
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -39,8 +57,37 @@ export const getAllTeams = async (req, res) => {
                 { owner: req.user._id },
                 { 'members.user': req.user._id }
             ]
-        }).populate('owner', 'name email');
-        res.json(teams);
+        })
+        .populate('owner', 'name email')
+        .populate('members.user', 'name email avatar');
+        res.json(teams.map(team => ({
+            _id: team._id,
+            name: team.name,
+            description: team.description,
+            teamType: team.teamType,
+            owner: team.owner ? {
+                _id: team.owner._id,
+                name: team.owner.name,
+                email: team.owner.email
+            } : null,
+            maxMembers: team.maxMembers,
+            members: team.members.map(m => ({
+                user: m.user ? {
+                    _id: m.user._id,
+                    name: m.user.name,
+                    email: m.user.email,
+                    avatar: m.user.avatar || null
+                } : null,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            isActive: team.isActive,
+            createdAt: team.createdAt,
+            updatedAt: team.updatedAt
+        })));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -50,13 +97,44 @@ export const getTeamDetails = async (req, res) => {
     try {
         const team = await Team.findById(req.params.teamId)
             .populate('owner', 'name email')
-            .populate('members.user', 'name email')
-            .populate('projects.project');
+            .populate('members.user', 'name email email avatar')
+            .populate('projects.project', 'title');
         
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
         }
-        res.json(team);
+        res.json({
+            _id: team._id,
+            name: team.name,
+            description: team.description,
+            teamType: team.teamType,
+            owner: team.owner ? {
+                _id: team.owner._id,
+                name: team.owner.name,
+                email: team.owner.email
+            } : null,
+            maxMembers: team.maxMembers,
+            members: team.members.map(m => ({
+                user: m.user ? {
+                    _id: m.user._id,
+                    name: m.user.name,
+                    email: m.user.email,
+                    avatar: m.user.avatar || null
+                } : null,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            projects: team.projects.map(p => p.project ? {
+                _id: p.project._id,
+                title: p.project.title
+            } : null),
+            isActive: team.isActive,
+            createdAt: team.createdAt,
+            updatedAt: team.updatedAt
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -67,7 +145,9 @@ export const updateTeam = async (req, res) => {
         const team = await Team.findOne({
             _id: req.params.teamId,
             owner: req.user._id
-        });
+        })
+        .populate('owner', 'name email')
+        .populate('members.user', 'name email avatar');
 
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
@@ -76,7 +156,25 @@ export const updateTeam = async (req, res) => {
         const updates = Object.keys(req.body);
         updates.forEach(update => team[update] = req.body[update]);
         await team.save();
-        res.json(team);
+        res.json({
+            _id: team._id,
+            name: team.name,
+            description: team.description,
+            teamType: team.teamType,
+            owner: team.owner._id,
+            maxMembers: team.maxMembers,
+            members: team.members.map(m => ({
+                user: m.user._id,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            isActive: team.isActive,
+            createdAt: team.createdAt,
+            updatedAt: team.updatedAt
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -100,15 +198,17 @@ export const deleteTeam = async (req, res) => {
 
 export const addTeamMember = async (req, res) => {
     try {
-        const team = await Team.findById(req.params.teamId);
+        const team = await Team.findById(req.params.teamId)
+            .populate('owner', 'name email')
+            .populate('members.user', 'name email email avatar');
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
         }
 
         // Check if user is owner or admin
-        const isAuthorized = team.owner.equals(req.user._id) || 
+        const isAuthorized = team.owner._id.equals(req.user._id) || 
             team.members.some(member => 
-                member.user.equals(req.user._id) && member.role === 'admin'
+                member.user._id.equals(req.user._id) && member.role === 'admin'
             );
 
         if (!isAuthorized) {
@@ -116,7 +216,7 @@ export const addTeamMember = async (req, res) => {
         }
 
         // Check if member already exists
-        if (team.members.some(member => member.user.equals(req.body.userId))) {
+        if (team.members.some(member => member.user._id.equals(req.body.userId))) {
             return res.status(400).json({ error: 'User is already a team member' });
         }
 
@@ -124,11 +224,34 @@ export const addTeamMember = async (req, res) => {
             user: req.body.userId,
             role: req.body.role || 'member',
             status: 'active',
+            permissions: req.body.permissions || {
+                canAddProjects: true,
+                canRemoveProjects: false,
+                canViewAllProjects: true
+            },
             invitedBy: req.user._id
         });
 
         await team.save();
-        res.json(team);
+        await team.populate('members.user', 'name email avatar');
+        res.json({
+            _id: team._id,
+            name: team.name,
+            description: team.description,
+            teamType: team.teamType,
+            owner: team.owner._id,
+            maxMembers: team.maxMembers,
+            members: team.members.map(m => ({
+                user: m.user._id,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            isActive: team.isActive,
+            updatedAt: team.updatedAt
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -136,15 +259,17 @@ export const addTeamMember = async (req, res) => {
 
 export const removeTeamMember = async (req, res) => {
     try {
-        const team = await Team.findById(req.params.teamId);
+        const team = await Team.findById(req.params.teamId)
+            .populate('owner', 'name email')
+            .populate('members.user', 'name email avatar');
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
         }
 
         // Check if user is owner or admin
-        const isAuthorized = team.owner.equals(req.user._id) || 
+        const isAuthorized = team.owner._id.equals(req.user._id) || 
             team.members.some(member => 
-                member.user.equals(req.user._id) && member.role === 'admin'
+                member.user._id.equals(req.user._id) && member.role === 'admin'
             );
 
         if (!isAuthorized) {
@@ -152,11 +277,25 @@ export const removeTeamMember = async (req, res) => {
         }
 
         team.members = team.members.filter(
-            member => !member.user.equals(req.params.userId)
+            member => !member.user._id.equals(req.params.userId)
         );
 
         await team.save();
-        res.json(team);
+        await team.populate('members.user', 'name email avatar');
+        res.json({
+            _id: team._id,
+            name: team.name,
+            members: team.members.map(m => ({
+                user: m.user._id,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            isActive: team.isActive,
+            updatedAt: team.updatedAt
+        });
     } catch (error) {
         res.status (400).json({ error: error.message });
     }
@@ -165,13 +304,24 @@ export const removeTeamMember = async (req, res) => {
 export const getTeamMembers = async (req, res) => {
     try {
         const team = await Team.findById(req.params.teamId)
-            .populate('members.user', 'name email avatar')
-            .select('members');
+            .populate('members.user', 'name email avatar');
             
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
         }
-        res.json(team.members);
+        res.json(team.members.map(m => ({
+            user: m.user ? {
+                _id: m.user._id,
+                name: m.user.name,
+                email: m.user.email,
+                avatar: m.user.avatar || null
+            } : null,
+            role: m.role,
+            status: m.status,
+            permissions: m.permissions,
+            invitedBy: m.invitedBy,
+            _id: m._id
+        })));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -179,18 +329,20 @@ export const getTeamMembers = async (req, res) => {
 
 export const updateTeamMemberRole = async (req, res) => {
     try {
-        const team = await Team.findById(req.params.teamId);
+        const team = await Team.findById(req.params.teamId)
+            .populate('owner', 'name email')
+            .populate('members.user', 'name email avatar');
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
         }
 
         // Only owner can update roles
-        if (!team.owner.equals(req.user._id)) {
+        if (!team.owner._id.equals(req.user._id)) {
             return res.status(403).json({ error: 'Only team owner can update roles' });
         }
 
         const memberIndex = team.members.findIndex(
-            member => member.user.equals(req.params.userId)
+            member => member.user._id.equals(req.params.userId)
         );
 
         if (memberIndex === -1) {
@@ -199,7 +351,25 @@ export const updateTeamMemberRole = async (req, res) => {
 
         team.members[memberIndex].role = req.body.role;
         await team.save();
-        res.json(team);
+        await team.populate('members.user', 'name email avatar');
+        res.json({
+            _id: team._id,
+            name: team.name,
+            description: team.description,
+            teamType: team.teamType,
+            owner: team.owner._id,
+            maxMembers: team.maxMembers,
+            members: team.members.map(m => ({
+                user: m.user._id,
+                role: m.role,
+                status: m.status,
+                permissions: m.permissions,
+                invitedBy: m.invitedBy,
+                _id: m._id
+            })),
+            isActive: team.isActive,
+            updatedAt: team.updatedAt
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -256,6 +426,68 @@ export const addProjectToTeam = async (req, res) => {
             message: 'Project added to team successfully',
             team: await team.populate('projects.project')
         });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const getTeamPermissions = async (req, res) => {
+    try {
+        const team = await Team.findById(req.params.teamId);
+        if (!team) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+
+        // Check if user has access to this team
+        const isMember = team.owner.equals(req.user._id) || 
+            team.members.some(member => member.user.equals(req.user._id));
+        
+        if (!isMember) {
+            return res.status(403).json({ error: 'Not authorized to access this team' });
+        }
+
+        // Return default team permissions structure
+        const teamPermissions = {
+            memberInvites: {
+                adminOnly: true,
+                allowMembers: false
+            },
+            projectManagement: {
+                adminOnly: true,
+                allowMembers: false
+            },
+            memberRemoval: {
+                adminOnly: true,
+                allowMembers: false
+            },
+            viewStats: {
+                adminOnly: false,
+                allowMembers: true,
+                allowViewers: true
+            }
+        };
+
+        res.json(teamPermissions);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const updateTeamPermissions = async (req, res) => {
+    try {
+        const team = await Team.findById(req.params.teamId);
+        if (!team) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+
+        // Only owner can update team permissions
+        if (!team.owner.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Only team owner can update permissions' });
+        }
+
+        // In a real implementation, you might store these in the team document
+        // For now, we'll just return the updated permissions
+        res.json(req.body);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

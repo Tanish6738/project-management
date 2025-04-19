@@ -1,23 +1,35 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProject } from '../../Context/ProjectContext';
+import { useTeam } from '../../Context/TeamContext';
 import { MagicCard } from '../../Elements/MagicCard';
 
 const ProjectList = () => {
   const { projects, loading, error, fetchProjects, createProject } = useProject();
+  const { teams, fetchTeams } = useTeam();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
-    startDate: '',
-    endDate: '',
-    status: 'Planning',
-    priority: 'Medium'
+    projectType: 'personal',
+    team: '',
+    priority: 'medium',
+    dueDate: '',
+    settings: {
+      visibility: 'private',
+      allowComments: true,
+      allowGuestAccess: false,
+      notifications: {
+        enabled: true,
+        frequency: 'daily'
+      }
+    }
   });
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+    fetchTeams();
+  }, [fetchProjects, fetchTeams]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,17 +39,57 @@ const ProjectList = () => {
     }));
   };
 
+  const handleSettingsChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setNewProject(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [name]: type === 'checkbox' ? checked : value
+      }
+    }));
+  };
+
+  const handleNotificationChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setNewProject(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        notifications: {
+          ...prev.settings.notifications,
+          [name]: type === 'checkbox' ? checked : value
+        }
+      }
+    }));
+  };
+
   const handleCreateProject = async (e) => {
     e.preventDefault();
     try {
-      await createProject(newProject);
+      // Only include team if projectType is 'team'
+      const projectData = {
+        ...newProject,
+        team: newProject.projectType === 'team' ? newProject.team : undefined
+      };
+      
+      await createProject(projectData);
       setNewProject({
         title: '',
         description: '',
-        startDate: '',
-        endDate: '',
-        status: 'Planning',
-        priority: 'Medium'
+        projectType: 'personal',
+        team: '',
+        priority: 'medium',
+        dueDate: '',
+        settings: {
+          visibility: 'private',
+          allowComments: true,
+          allowGuestAccess: false,
+          notifications: {
+            enabled: true,
+            frequency: 'daily'
+          }
+        }
       });
       setShowCreateForm(false);
     } catch (err) {
@@ -51,14 +103,17 @@ const ProjectList = () => {
   };
 
   const getStatusClass = (status) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
       case 'planning':
+      case 'active':
         return 'bg-blue-100 text-blue-800';
       case 'in progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
         return 'bg-green-100 text-green-800';
       case 'on hold':
+      case 'archived':
         return 'bg-orange-100 text-orange-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
@@ -68,6 +123,7 @@ const ProjectList = () => {
   };
 
   const getPriorityClass = (priority) => {
+    if (!priority) return 'bg-gray-100 text-gray-800';
     switch (priority.toLowerCase()) {
       case 'low':
         return 'bg-green-100 text-green-800';
@@ -133,51 +189,44 @@ const ProjectList = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="startDate">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  id="startDate"
-                  name="startDate"
-                  value={newProject.startDate}
-                  onChange={handleInputChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="endDate">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={newProject.endDate}
-                  onChange={handleInputChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
-                  Status
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="projectType">
+                  Project Type
                 </label>
                 <select
-                  id="status"
-                  name="status"
-                  value={newProject.status}
+                  id="projectType"
+                  name="projectType"
+                  value={newProject.projectType}
                   onChange={handleInputChange}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 >
-                  <option value="Planning">Planning</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="On Hold">On Hold</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
+                  <option value="personal">Personal</option>
+                  <option value="team">Team</option>
                 </select>
               </div>
+              {newProject.projectType === 'team' && (
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="team">
+                    Team
+                  </label>
+                  <select
+                    id="team"
+                    name="team"
+                    value={newProject.team}
+                    onChange={handleInputChange}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    required={newProject.projectType === 'team'}
+                  >
+                    <option value="">Select a Team</option>
+                    {teams.map((team) => (
+                      <option key={team._id} value={team._id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="priority">
                   Priority
@@ -189,13 +238,114 @@ const ProjectList = () => {
                   onChange={handleInputChange}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Urgent">Urgent</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dueDate">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  id="dueDate"
+                  name="dueDate"
+                  value={newProject.dueDate}
+                  onChange={handleInputChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
+              </div>
             </div>
+            
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Project Settings
+              </label>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="mb-3">
+                  <label className="block text-gray-700 text-sm mb-1" htmlFor="visibility">
+                    Visibility
+                  </label>
+                  <select
+                    id="visibility"
+                    name="visibility"
+                    value={newProject.settings.visibility}
+                    onChange={handleSettingsChange}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  >
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                    <option value="team">Team Only</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center mb-2">
+                  <input
+                    id="allowComments"
+                    name="allowComments"
+                    type="checkbox"
+                    checked={newProject.settings.allowComments}
+                    onChange={handleSettingsChange}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="allowComments" className="ml-2 block text-sm text-gray-700">
+                    Allow Comments
+                  </label>
+                </div>
+                
+                <div className="flex items-center mb-3">
+                  <input
+                    id="allowGuestAccess"
+                    name="allowGuestAccess"
+                    type="checkbox"
+                    checked={newProject.settings.allowGuestAccess}
+                    onChange={handleSettingsChange}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="allowGuestAccess" className="ml-2 block text-sm text-gray-700">
+                    Allow Guest Access
+                  </label>
+                </div>
+                
+                <div className="mb-2">
+                  <div className="flex items-center mb-2">
+                    <input
+                      id="enabled"
+                      name="enabled"
+                      type="checkbox"
+                      checked={newProject.settings.notifications.enabled}
+                      onChange={handleNotificationChange}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="enabled" className="ml-2 block text-sm text-gray-700">
+                      Enable Notifications
+                    </label>
+                  </div>
+                  
+                  {newProject.settings.notifications.enabled && (
+                    <div className="ml-6">
+                      <label className="block text-gray-700 text-sm mb-1" htmlFor="frequency">
+                        Notification Frequency
+                      </label>
+                      <select
+                        id="frequency"
+                        name="frequency"
+                        value={newProject.settings.notifications.frequency}
+                        onChange={handleNotificationChange}
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      >
+                        <option value="instant">Instant</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
             <div className="flex items-center justify-end">
               <button
                 type="submit"
@@ -231,26 +381,35 @@ const ProjectList = () => {
                 
                 <div className="flex flex-wrap gap-2 mb-4">
                   <span className={`${getStatusClass(project.status)} px-2 py-1 text-xs font-semibold rounded-full`}>
-                    {project.status}
+                    {project.status || 'Active'}
                   </span>
                   <span className={`${getPriorityClass(project.priority)} px-2 py-1 text-xs font-semibold rounded-full`}>
-                    {project.priority}
+                    {project.priority || 'Medium'}
+                  </span>
+                  <span className="bg-gray-100 text-gray-800 px-2 py-1 text-xs font-semibold rounded-full">
+                    {project.projectType === 'team' ? 'Team' : 'Personal'}
                   </span>
                 </div>
                 
                 <div className="text-sm text-gray-500 mb-4">
                   <div className="flex justify-between mb-2">
-                    <span>Start:</span>
-                    <span>{formatDate(project.startDate)}</span>
+                    <span>Owner:</span>
+                    <span>{project.owner?.name || 'You'}</span>
                   </div>
+                  {project.team && (
+                    <div className="flex justify-between mb-2">
+                      <span>Team:</span>
+                      <span>{project.team?.name || 'N/A'}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span>Deadline:</span>
-                    <span>{formatDate(project.endDate)}</span>
+                    <span>Due:</span>
+                    <span>{formatDate(project.dueDate)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">
-                    {project.teams?.length || 0} teams
+                    {(project.members?.length || 1)} members
                   </span>
                   <Link
                     to={`/projects/${project._id}`}

@@ -277,6 +277,20 @@ export const TaskProvider = ({ children }) => {
     }
   }, []);
 
+  const getTeamTaskStats = useCallback(async (teamId) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await taskService.getTeamTaskStats(teamId);
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, []);
+
   return (
     <TaskContext.Provider
       value={{
@@ -294,7 +308,8 @@ export const TaskProvider = ({ children }) => {
         updateTaskPriority,
         getTasksByStatus,
         getTasksByAssignee,
-        getTaskKanbanView
+        getTaskKanbanView,
+        getTeamTaskStats
       }}
     >
       {children}

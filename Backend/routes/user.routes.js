@@ -21,7 +21,8 @@ import {
     getNotificationSettings,
     updateNotificationSettings,
     getWorkHours,
-    setWorkHours
+    setWorkHours,
+    searchUsers
 } from '../controllers/user.controller.js';
 
 const UserRouter = express.Router();
@@ -36,6 +37,9 @@ UserRouter.post('/refresh-token', refreshToken);
 UserRouter.get('/me', auth, getProfile);
 UserRouter.put('/me', auth, validateProfileUpdate, validate, updateProfile);
 UserRouter.delete('/me', auth, deleteUser);
+
+// User search route
+UserRouter.get('/search', auth, searchUsers);
 
 // User preferences and settings
 UserRouter.put('/preferences', auth, updatePreferences);

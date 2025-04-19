@@ -44,7 +44,31 @@ export const createProject = async (req, res) => {
             $push: { projects: project._id }
         });
 
-        res.status(201).json(project);
+        await project.populate('owner', 'name email');
+        await project.populate('members.user', 'name email');
+        res.status(201).json({
+            _id: project._id,
+            title: project.title,
+            description: project.description,
+            projectType: project.projectType,
+            team: project.team,
+            owner: project.owner._id,
+            priority: project.priority,
+            dueDate: project.dueDate,
+            status: project.status,
+            settings: project.settings,
+            members: project.members.map(m => ({
+                user: m.user._id,
+                role: m.role,
+                permissions: m.permissions,
+                addedBy: m.addedBy,
+                _id: m._id
+            })),
+            workflow: project.workflow,
+            tags: project.tags,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -57,8 +81,39 @@ export const getAllProjects = async (req, res) => {
                 { owner: req.user._id },
                 { 'members.user': req.user._id }
             ]
-        }).populate('owner', 'name email');
-        res.json(projects);
+        })
+        .populate('owner', 'name email')
+        .populate('members.user', 'name email avatar');
+        res.json(projects.map(project => ({
+            _id: project._id,
+            title: project.title,
+            description: project.description,
+            projectType: project.projectType,
+            team: project.team,
+            owner: project.owner ? {
+                _id: project.owner._id,
+                name: project.owner.name,
+                email: project.owner.email
+            } : null,
+            priority: project.priority,
+            dueDate: project.dueDate,
+            status: project.status,
+            members: project.members.map(m => ({
+                user: m.user ? {
+                    _id: m.user._id,
+                    name: m.user.name,
+                    email: m.user.email,
+                    avatar: m.user.avatar || null
+                } : null,
+                role: m.role,
+                permissions: m.permissions,
+                addedBy: m.addedBy,
+                _id: m._id
+            })),
+            tags: project.tags,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt
+        })));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -68,7 +123,7 @@ export const getProjectDetails = async (req, res) => {
     try {
         const project = await Project.findById(req.params.projectId)
             .populate('owner', 'name email')
-            .populate('members.user', 'name email')
+            .populate('members.user', 'name email avatar')
             .populate('team', 'name');
 
         if (!project) {
@@ -83,7 +138,41 @@ export const getProjectDetails = async (req, res) => {
             return res.status(403).json({ error: 'Not authorized to view this project' });
         }
 
-        res.json(project);
+        res.json({
+            _id: project._id,
+            title: project.title,
+            description: project.description,
+            projectType: project.projectType,
+            team: project.team ? {
+                _id: project.team._id,
+                name: project.team.name
+            } : null,
+            owner: project.owner ? {
+                _id: project.owner._id,
+                name: project.owner.name,
+                email: project.owner.email
+            } : null,
+            priority: project.priority,
+            dueDate: project.dueDate,
+            status: project.status,
+            settings: project.settings,
+            members: project.members.map(m => ({
+                user: m.user ? {
+                    _id: m.user._id,
+                    name: m.user.name,
+                    email: m.user.email,
+                    avatar: m.user.avatar || null
+                } : null,
+                role: m.role,
+                permissions: m.permissions,
+                addedBy: m.addedBy,
+                _id: m._id
+            })),
+            workflow: project.workflow,
+            tags: project.tags,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

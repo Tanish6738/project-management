@@ -52,6 +52,9 @@ const taskService = {
   getTaskKanbanView: (projectId) => apiClient.get('/tasks/kanban', { params: { projectId } }),
   getTaskCalendarView: (projectId) => apiClient.get('/tasks/calendar', { params: { projectId } }),
   
+  // Team tasks
+  getTeamTaskStats: (teamId) => apiClient.get(`/tasks/team-stats/${teamId}`),
+  
   // Task analytics
   getTaskMetrics: (taskId) => apiClient.get(`/tasks/${taskId}/metrics`),
   getTaskHistory: (taskId) => apiClient.get(`/tasks/${taskId}/history`),

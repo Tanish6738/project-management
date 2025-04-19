@@ -41,6 +41,46 @@ const projectReducer = (state, action) => {
         loading: false,
         error: null
       };
+    case 'UPDATE_PROJECT_SETTINGS':
+      return {
+        ...state,
+        currentProject: {
+          ...state.currentProject,
+          settings: action.payload
+        },
+        loading: false,
+        error: null
+      };
+    case 'UPDATE_PROJECT_WORKFLOW':
+      return {
+        ...state,
+        currentProject: {
+          ...state.currentProject,
+          workflow: action.payload
+        },
+        loading: false,
+        error: null
+      };
+    case 'UPDATE_PROJECT_TAGS':
+      return {
+        ...state,
+        currentProject: {
+          ...state.currentProject,
+          tags: action.payload
+        },
+        loading: false,
+        error: null
+      };
+    case 'UPDATE_PROJECT_MEMBERS':
+      return {
+        ...state,
+        currentProject: {
+          ...state.currentProject,
+          members: action.payload
+        },
+        loading: false,
+        error: null
+      };
     case 'DELETE_PROJECT':
       return {
         ...state,
@@ -115,6 +155,113 @@ export const ProjectProvider = ({ children }) => {
     }
   }, []);
 
+  const updateProjectSettings = useCallback(async (projectId, settingsData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await projectService.updateProjectSettings(projectId, settingsData);
+      
+      if (state.currentProject && state.currentProject._id === projectId) {
+        dispatch({ 
+          type: 'UPDATE_PROJECT_SETTINGS', 
+          payload: response.data.settings || settingsData
+        });
+      }
+      
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [state.currentProject]);
+
+  const updateProjectWorkflow = useCallback(async (projectId, workflowData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await projectService.updateProjectWorkflow(projectId, workflowData);
+      
+      if (state.currentProject && state.currentProject._id === projectId) {
+        dispatch({ 
+          type: 'UPDATE_PROJECT_WORKFLOW', 
+          payload: response.data.workflow || workflowData.workflow
+        });
+      }
+      
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [state.currentProject]);
+
+  const manageProjectTags = useCallback(async (projectId, tagsData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await projectService.manageProjectTags(projectId, tagsData);
+      
+      if (state.currentProject && state.currentProject._id === projectId) {
+        dispatch({ 
+          type: 'UPDATE_PROJECT_TAGS', 
+          payload: response.data.tags || []
+        });
+      }
+      
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [state.currentProject]);
+
+  const addProjectMember = useCallback(async (projectId, memberData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await projectService.addProjectMember(projectId, memberData);
+      
+      if (state.currentProject && state.currentProject._id === projectId) {
+        dispatch({ 
+          type: 'UPDATE_PROJECT_MEMBERS', 
+          payload: response.data.members || []
+        });
+      }
+      
+      toast.success('Member added to project successfully');
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [state.currentProject]);
+
+  const removeProjectMember = useCallback(async (projectId, memberId) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await projectService.removeProjectMember(projectId, memberId);
+      
+      if (state.currentProject && state.currentProject._id === projectId) {
+        dispatch({ 
+          type: 'UPDATE_PROJECT_MEMBERS', 
+          payload: response.data.members || []
+        });
+      }
+      
+      toast.success('Member removed from project successfully');
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [state.currentProject]);
+
   const deleteProject = useCallback(async (projectId) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -173,6 +320,41 @@ export const ProjectProvider = ({ children }) => {
     }
   }, []);
 
+  // Add fetchProjectActivities function
+  const fetchProjectActivities = useCallback(async (projectId = null) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      let response;
+      
+      if (projectId) {
+        // If a specific project ID is provided, get activities for that project
+        response = await projectService.getProjectActivity(projectId);
+      } else {
+        // Otherwise, collect activities from all projects
+        const projects = state.projects.length ? state.projects : await fetchProjects();
+        
+        // Get activities for the first few projects (to limit API calls)
+        const projectActivitiesPromises = projects
+          .slice(0, 5) // Limit to 5 projects to avoid too many API calls
+          .map(project => projectService.getProjectActivity(project._id));
+        
+        const projectActivitiesResponses = await Promise.all(projectActivitiesPromises);
+        
+        // Flatten the array of activities
+        const allActivities = projectActivitiesResponses.flatMap(res => res.data || []);
+        response = { data: allActivities };
+      }
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response.data;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      console.error("Error fetching project activities:", error);
+      throw error;
+    }
+  }, [state.projects, fetchProjects]);
+
   return (
     <ProjectContext.Provider
       value={{
@@ -184,7 +366,13 @@ export const ProjectProvider = ({ children }) => {
         deleteProject,
         addTeamToProject,
         removeTeamFromProject,
-        getProjectStats
+        getProjectStats,
+        updateProjectSettings,
+        updateProjectWorkflow,
+        manageProjectTags,
+        addProjectMember,
+        removeProjectMember,
+        fetchProjectActivities
       }}
     >
       {children}

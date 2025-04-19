@@ -29,300 +29,196 @@ const TaskDetail = () => {
     fetchTaskComments, 
     addComment 
   } = useComment();
-  const { 
-    attachments, 
-    loading: attachmentsLoading, 
-    fetchTaskAttachments, 
-    uploadAttachment, 
-    deleteAttachment 
+  const {
+    attachments,
+    loading: attachmentsLoading,
+    fetchTaskAttachments,
+    uploadAttachment,
+    deleteAttachment
   } = useAttachment();
-  const { 
-    timelogs, 
-    loading: timelogsLoading, 
-    fetchTaskTimelogs, 
-    startTimelog, 
-    stopTimelog, 
-    addTimelog 
+  const {
+    timelogs,
+    loading: timelogsLoading,
+    fetchTaskTimelogs,
+    addTimeToTask,
+    deleteTimelog
   } = useTimelog();
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTask, setEditedTask] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showCommentForm, setShowCommentForm] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [showTimelogForm, setShowTimelogForm] = useState(false);
-  const [newTimelog, setNewTimelog] = useState({
-    date: new Date().toISOString().split('T')[0],
-    hours: 1,
-    description: ''
+
+  // Local state for form values
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: '',
+    priority: '',
+    deadline: '',
+    assignedTo: ''
   });
-  const [isTimeTracking, setIsTimeTracking] = useState(false);
-  const [trackingStartTime, setTrackingStartTime] = useState(null);
-  const [activeTimelogId, setActiveTimelogId] = useState(null);
+  const [newComment, setNewComment] = useState('');
+  const [newTimeLog, setNewTimeLog] = useState({
+    timeSpent: '',
+    description: '',
+    startTime: '',
+    endTime: ''
+  });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [showAssignForm, setShowAssignForm] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [subtasks, setSubtasks] = useState([]);
+  const [newSubtask, setNewSubtask] = useState({
+    title: '',
+    description: '',
+    priority: 'medium'
+  });
 
   // Fetch task details and related data
   useEffect(() => {
     if (taskId) {
       fetchTaskById(taskId);
+      fetchUsers();
+      fetchProjects();
       fetchTaskComments(taskId);
       fetchTaskAttachments(taskId);
       fetchTaskTimelogs(taskId);
-      fetchUsers();
-      fetchProjects();
     }
-  }, [taskId, fetchTaskById, fetchTaskComments, fetchTaskAttachments, fetchTaskTimelogs, fetchUsers, fetchProjects]);
+  }, [taskId, fetchTaskById, fetchUsers, fetchProjects, fetchTaskComments, fetchTaskAttachments, fetchTaskTimelogs]);
 
-  // Update editedTask when currentTask changes
+  // Update form data when task data changes
   useEffect(() => {
     if (currentTask) {
-      setEditedTask({
-        title: currentTask.title,
+      setFormData({
+        title: currentTask.title || '',
         description: currentTask.description || '',
-        dueDate: currentTask.dueDate ? new Date(currentTask.dueDate).toISOString().split('T')[0] : '',
-        status: currentTask.status,
-        priority: currentTask.priority,
-        projectId: currentTask.projectId?._id || currentTask.projectId
+        status: currentTask.status || '',
+        priority: currentTask.priority || '',
+        deadline: currentTask.deadline ? new Date(currentTask.deadline).toISOString().split('T')[0] : '',
+        assignedTo: currentTask.assignedTo?._id || ''
       });
+      
+      setSubtasks(currentTask.subtasks || []);
     }
   }, [currentTask]);
 
-  // Check for active timelogs
-  useEffect(() => {
-    if (timelogs && timelogs.length > 0) {
-      const activeLog = timelogs.find(log => log.endTime === null);
-      if (activeLog) {
-        setIsTimeTracking(true);
-        setTrackingStartTime(new Date(activeLog.startTime));
-        setActiveTimelogId(activeLog._id);
-      }
-    }
-  }, [timelogs]);
-
-  const handleInputChange = (e) => {
+  // Handle form input changes
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditedTask(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleTimelogInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewTimelog(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleUpdateTask = async (e) => {
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateTask(taskId, editedTask);
-      setIsEditing(false);
+      await updateTask(taskId, formData);
+      setEditMode(false);
       toast.success('Task updated successfully');
-    } catch (err) {
-      toast.error('Failed to update task');
+    } catch (error) {
+      toast.error(`Failed to update task: ${error.message}`);
     }
   };
 
-  const handleDeleteTask = async () => {
-    if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-      try {
-        setIsDeleting(true);
-        await deleteTask(taskId);
-        navigate('/tasks');
-        toast.success('Task deleted successfully');
-      } catch (err) {
-        setIsDeleting(false);
-        toast.error('Failed to delete task');
-      }
+  // Handle task deletion
+  const handleDelete = async () => {
+    try {
+      await deleteTask(taskId);
+      toast.success('Task deleted successfully');
+      navigate('/tasks');
+    } catch (error) {
+      toast.error(`Failed to delete task: ${error.message}`);
     }
   };
 
+  // Handle task completion
   const handleCompleteTask = async () => {
     try {
       await completeTask(taskId);
-      toast.success('Task marked as complete');
-    } catch (err) {
-      toast.error('Failed to mark task as complete');
+      toast.success('Task marked as completed');
+    } catch (error) {
+      toast.error(`Failed to complete task: ${error.message}`);
     }
   };
 
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) {
-      toast.error('Comment cannot be empty');
-      return;
+  // Handle task assignment
+  const handleAssign = async (userId) => {
+    try {
+      await assignTaskToUser(taskId, userId);
+      toast.success('Task assigned successfully');
+    } catch (error) {
+      toast.error(`Failed to assign task: ${error.message}`);
     }
+  };
+
+  // Handle comment submission
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
 
     try {
       await addComment(taskId, { content: newComment });
       setNewComment('');
-      setShowCommentForm(false);
       toast.success('Comment added');
-    } catch (err) {
-      toast.error('Failed to add comment');
+    } catch (error) {
+      toast.error(`Failed to add comment: ${error.message}`);
     }
   };
 
-  const handleTimelogSubmit = async (e) => {
+  // Handle time log submission
+  const handleAddTimeLog = async (e) => {
     e.preventDefault();
+    
     try {
-      await addTimelog(taskId, newTimelog);
-      setNewTimelog({
-        date: new Date().toISOString().split('T')[0],
-        hours: 1,
-        description: ''
+      await addTimeToTask(taskId, newTimeLog);
+      setNewTimeLog({
+        timeSpent: '',
+        description: '',
+        startTime: '',
+        endTime: ''
       });
-      setShowTimelogForm(false);
       toast.success('Time log added');
-    } catch (err) {
-      toast.error('Failed to add time log');
+    } catch (error) {
+      toast.error(`Failed to add time log: ${error.message}`);
     }
   };
 
-  const handleStartTracking = async () => {
-    try {
-      const response = await startTimelog(taskId);
-      setIsTimeTracking(true);
-      setTrackingStartTime(new Date());
-      setActiveTimelogId(response._id);
-      toast.success('Time tracking started');
-    } catch (err) {
-      toast.error('Failed to start time tracking');
-    }
-  };
-
-  const handleStopTracking = async () => {
-    try {
-      await stopTimelog(activeTimelogId);
-      setIsTimeTracking(false);
-      setTrackingStartTime(null);
-      setActiveTimelogId(null);
-      toast.success('Time tracking stopped');
-      fetchTaskTimelogs(taskId);
-    } catch (err) {
-      toast.error('Failed to stop time tracking');
-    }
-  };
-
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
-
+  // Handle file upload
   const handleFileUpload = async (e) => {
     e.preventDefault();
-    if (!selectedFile) {
-      toast.error('Please select a file');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
+    if (!selectedFile) return;
 
     try {
-      await uploadAttachment(taskId, formData, (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUploadProgress(percentCompleted);
-      });
+      const formData = new FormData();
+      formData.append('file', selectedFile);
       
+      await uploadAttachment(taskId, formData);
       setSelectedFile(null);
-      setUploadProgress(0);
       toast.success('File uploaded successfully');
-    } catch (err) {
-      toast.error('Failed to upload file');
-      setUploadProgress(0);
+    } catch (error) {
+      toast.error(`Failed to upload file: ${error.message}`);
     }
   };
 
-  const handleDeleteAttachment = async (attachmentId) => {
-    if (window.confirm('Are you sure you want to delete this attachment?')) {
-      try {
-        await deleteAttachment(attachmentId);
-        toast.success('Attachment deleted');
-      } catch (err) {
-        toast.error('Failed to delete attachment');
-      }
-    }
-  };
-
-  const handleAssignToUser = async () => {
-    if (!selectedUserId) {
-      toast.error('Please select a user');
-      return;
-    }
+  // Handle subtask creation
+  const handleAddSubtask = async (e) => {
+    e.preventDefault();
+    if (!newSubtask.title.trim()) return;
 
     try {
-      await assignTaskToUser(taskId, selectedUserId);
-      setShowAssignForm(false);
-      setSelectedUserId('');
-      toast.success('Task assigned successfully');
-    } catch (err) {
-      toast.error('Failed to assign task');
+      // Assuming API to create subtask for a parent task
+      // const createdSubtask = await createSubtask(taskId, newSubtask);
+      // setSubtasks(prev => [...prev, createdSubtask]);
+      setNewSubtask({
+        title: '',
+        description: '',
+        priority: 'medium'
+      });
+      toast.success('Subtask added');
+    } catch (error) {
+      toast.error(`Failed to add subtask: ${error.message}`);
     }
   };
 
-  const formatDuration = (startDate) => {
-    if (!startDate) return '00:00:00';
-    
-    const start = new Date(startDate);
-    const now = new Date();
-    const diff = Math.abs(now - start);
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    const seconds = Math.floor((diff / 1000) % 60);
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleTimeString();
-  };
-
-  const getStatusClass = (status) => {
-    switch (status.toLowerCase()) {
-      case 'todo':
-        return 'bg-gray-100 text-gray-800';
-      case 'in progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'review':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'done':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityClass = (priority) => {
-    switch (priority.toLowerCase()) {
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  if (loading && !currentTask) {
+  if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
@@ -330,625 +226,696 @@ const TaskDetail = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
-          <p className="font-bold">Error</p>
-          <p>{error}</p>
-          <button 
-            className="mt-2 text-indigo-600 underline" 
-            onClick={() => navigate('/tasks')}
-          >
-            Back to Tasks
-          </button>
-        </div>
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <strong className="font-bold">Error:</strong>
+        <span className="block sm:inline"> {error}</span>
       </div>
     );
   }
 
   if (!currentTask) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
-          <p className="font-bold">Task not found</p>
-          <button 
-            className="mt-2 text-indigo-600 underline" 
-            onClick={() => navigate('/tasks')}
-          >
-            Back to Tasks
-          </button>
-        </div>
+      <div className="text-center py-10">
+        <p className="text-xl text-gray-600">Task not found</p>
       </div>
     );
   }
 
-  const totalLoggedTime = timelogs.reduce((total, log) => {
-    if (log.endTime) {
-      const start = new Date(log.startTime);
-      const end = new Date(log.endTime);
-      return total + (end - start) / (1000 * 60 * 60); // Convert to hours
-    } else if (log.hours) {
-      return total + log.hours;
-    }
-    return total;
-  }, 0);
+  // Determine if the current task is overdue
+  const isOverdue = () => {
+    if (!currentTask.deadline) return false;
+    const deadline = new Date(currentTask.deadline);
+    const today = new Date();
+    return deadline < today && currentTask.status !== 'completed';
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Task Header */}
       <div className="mb-6">
-        <button 
-          onClick={() => navigate('/tasks')}
-          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Tasks
-        </button>
-      </div>
+        <div className="flex justify-between items-start">
+          <div>
+            {editMode ? (
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className="text-2xl font-bold border-b border-gray-300 focus:border-indigo-500 outline-none w-full"
+              />
+            ) : (
+              <h1 className="text-2xl font-bold text-gray-900">{currentTask.title}</h1>
+            )}
 
-      {/* Task Details */}
-      <div className="bg-white shadow-md rounded-md overflow-hidden mb-6">
-        <div className="p-6">
-          {!isEditing ? (
-            <>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{currentTask.title}</h1>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <span className={`${getStatusClass(currentTask.status)} px-2 py-1 text-sm font-semibold rounded-full`}>
-                      {currentTask.status}
-                    </span>
-                    <span className={`${getPriorityClass(currentTask.priority)} px-2 py-1 text-sm font-semibold rounded-full`}>
-                      {currentTask.priority}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm"
-                  >
-                    Edit Task
-                  </button>
-                  <button
-                    onClick={handleDeleteTask}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? 'Deleting...' : 'Delete Task'}
-                  </button>
-                </div>
-              </div>
-              
-              <p className="text-gray-600 mb-4">{currentTask.description || 'No description provided'}</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <div className="text-sm text-gray-500">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">Project:</span>
-                      <span>
-                        {currentTask.projectId ? (
-                          <a 
-                            href={`/projects/${currentTask.projectId._id || currentTask.projectId}`}
-                            className="text-indigo-600 hover:text-indigo-800"
-                          >
-                            {currentTask.projectId.title || 'View Project'}
-                          </a>
-                        ) : 'Not assigned'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">Assigned to:</span>
-                      <div className="flex items-center">
-                        <span>{currentTask.assignedTo?.name || 'Unassigned'}</span>
-                        <button
-                          onClick={() => setShowAssignForm(!showAssignForm)}
-                          className="ml-2 text-indigo-600 hover:text-indigo-800 text-xs"
-                        >
-                          {showAssignForm ? 'Cancel' : 'Change'}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Due Date:</span>
-                      <span>{currentTask.dueDate ? new Date(currentTask.dueDate).toLocaleDateString() : 'Not set'}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <div className="text-sm text-gray-500">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">Created:</span>
-                      <span>{formatDate(currentTask.createdAt)}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">Last Updated:</span>
-                      <span>{formatDate(currentTask.updatedAt)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Total Time Logged:</span>
-                      <span>{totalLoggedTime.toFixed(2)} hours</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className={`px-3 py-1 text-xs rounded-full ${
+                currentTask.priority === 'high' 
+                  ? 'bg-red-100 text-red-800' 
+                  : currentTask.priority === 'medium'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-blue-100 text-blue-800'
+              }`}>
+                {currentTask.priority ? currentTask.priority.charAt(0).toUpperCase() + currentTask.priority.slice(1) : 'No priority'}
+              </span>
 
-              {showAssignForm && (
-                <div className="bg-gray-50 p-4 rounded-md mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Assign Task</h3>
-                  <div className="flex space-x-2">
-                    <select
-                      value={selectedUserId}
-                      onChange={(e) => setSelectedUserId(e.target.value)}
-                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2"
-                    >
-                      <option value="">-- Select User --</option>
-                      {users.map(user => (
-                        <option key={user._id} value={user._id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleAssignToUser}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm"
-                    >
-                      Assign
-                    </button>
-                  </div>
-                </div>
+              <span className={`px-3 py-1 text-xs rounded-full ${
+                currentTask.status === 'completed' 
+                  ? 'bg-green-100 text-green-800' 
+                  : currentTask.status === 'in-progress'
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {currentTask.status ? currentTask.status.charAt(0).toUpperCase() + currentTask.status.slice(1) : 'No status'}
+              </span>
+
+              {currentTask.deadline && (
+                <span className={`px-3 py-1 text-xs rounded-full ${
+                  isOverdue()
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  Due: {new Date(currentTask.deadline).toLocaleDateString()}
+                </span>
               )}
+            </div>
+          </div>
 
-              {currentTask.status !== 'Done' && (
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={handleCompleteTask}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  >
-                    Mark as Complete
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <form onSubmit={handleUpdateTask}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
-                  Task Title
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={editedTask.title}
-                  onChange={handleInputChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-                  Description
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={editedTask.description}
-                  onChange={handleInputChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  rows="3"
-                ></textarea>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dueDate">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    id="dueDate"
-                    name="dueDate"
-                    value={editedTask.dueDate}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="projectId">
-                    Project
-                  </label>
-                  <select
-                    id="projectId"
-                    name="projectId"
-                    value={editedTask.projectId || ''}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  >
-                    <option value="">No Project</option>
-                    {projects.map(project => (
-                      <option key={project._id} value={project._id}>
-                        {project.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
-                    Status
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={editedTask.status}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  >
-                    <option value="Todo">Todo</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Review">Review</option>
-                    <option value="Done">Done</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="priority">
-                    Priority
-                  </label>
-                  <select
-                    id="priority"
-                    name="priority"
-                    value={editedTask.priority}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
+          <div className="flex space-x-2">
+            {editMode ? (
+              <>
                 <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                  onClick={handleSubmit}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditMode(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  disabled={loading}
-                >
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-
-      {/* Time Tracking Section */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Time Tracking</h2>
-          <div className="flex space-x-2">
-            {!isTimeTracking ? (
-              <button
-                onClick={handleStartTracking}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm"
-              >
-                Start Timer
-              </button>
+              </>
             ) : (
-              <button
-                onClick={handleStopTracking}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
-              >
-                Stop Timer
-              </button>
+              <>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300"
+                >
+                  Edit
+                </button>
+                {currentTask.status !== 'completed' && (
+                  <button
+                    onClick={handleCompleteTask}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700"
+                  >
+                    Complete
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </>
             )}
-            <button
-              onClick={() => setShowTimelogForm(!showTimelogForm)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm"
-            >
-              {showTimelogForm ? 'Cancel' : 'Add Time Manually'}
-            </button>
           </div>
         </div>
 
-        {isTimeTracking && (
-          <div className="bg-blue-50 p-4 rounded-md mb-4 flex items-center justify-between">
-            <div>
-              <span className="font-medium">Timer Running:</span>
-              <span className="text-2xl font-bold ml-2" id="timer">
-                {formatDuration(trackingStartTime)}
-              </span>
-            </div>
-            <span className="text-sm text-gray-500">
-              Started at {formatTime(trackingStartTime)}
-            </span>
+        {/* Project link */}
+        {currentTask.project && (
+          <div className="mt-3 text-sm">
+            <span className="text-gray-600">Project: </span>
+            <a 
+              href={`/projects/${currentTask.project._id}`}
+              className="text-indigo-600 hover:text-indigo-900"
+            >
+              {currentTask.project.title}
+            </a>
           </div>
         )}
 
-        {showTimelogForm && (
-          <div className="bg-white shadow-md rounded-md p-6 mb-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add Time Log</h3>
-            <form onSubmit={handleTimelogSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="date">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    value={newTimelog.date}
-                    onChange={handleTimelogInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="hours">
-                    Hours
-                  </label>
-                  <input
-                    type="number"
-                    id="hours"
-                    name="hours"
-                    value={newTimelog.hours}
-                    onChange={handleTimelogInputChange}
-                    min="0.25"
-                    step="0.25"
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-                    Description
-                  </label>
-                  <input
-                    type="text"
-                    id="description"
-                    name="description"
-                    value={newTimelog.description}
-                    onChange={handleTimelogInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder="What did you work on?"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  disabled={loading}
-                >
-                  {loading ? 'Adding...' : 'Add Time Log'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {timelogsLoading ? (
-          <div className="flex justify-center items-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-          </div>
-        ) : timelogs.length === 0 ? (
-          <div className="bg-white shadow-md rounded-md p-6 text-center text-gray-500">
-            No time logs recorded yet.
-          </div>
-        ) : (
-          <div className="bg-white shadow-md rounded-md overflow-hidden">
-            <ul className="divide-y divide-gray-200">
-              {timelogs.map((log) => (
-                <li key={log._id} className="p-4">
-                  <div className="flex justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-indigo-600">
-                        {log.description || 'No description'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {log.user?.name || 'Unknown user'} · {formatDate(log.date || log.startTime)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold">
-                        {log.endTime ? (
-                          ((new Date(log.endTime) - new Date(log.startTime)) / (1000 * 60 * 60)).toFixed(2)
-                        ) : log.hours ? (
-                          log.hours
-                        ) : (
-                          <span className="text-blue-600">In progress</span>
-                        )}
-                        {(log.endTime || log.hours) && ' hours'}
-                      </p>
-                      {log.startTime && log.endTime && (
-                        <p className="text-xs text-gray-500">
-                          {formatTime(log.startTime)} - {formatTime(log.endTime)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+        {/* Parent task link (if it's a subtask) */}
+        {currentTask.isSubtask && currentTask.parentTask && (
+          <div className="mt-1 text-sm">
+            <span className="text-gray-600">Parent Task: </span>
+            <a 
+              href={`/tasks/${currentTask.parentTask._id}`}
+              className="text-indigo-600 hover:text-indigo-900"
+            >
+              {currentTask.parentTask.title}
+            </a>
           </div>
         )}
       </div>
 
-      {/* Attachments Section */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Attachments</h2>
-        </div>
-
-        <div className="bg-white shadow-md rounded-md p-6 mb-4">
-          <form onSubmit={handleFileUpload} className="flex items-center space-x-4">
-            <div className="flex-1">
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-indigo-50 file:text-indigo-700
-                  hover:file:bg-indigo-100"
-              />
-              {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
-                </div>
-              )}
-            </div>
-            <button
-              type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              disabled={attachmentsLoading || !selectedFile}
-            >
-              {attachmentsLoading ? 'Uploading...' : 'Upload'}
-            </button>
-          </form>
-        </div>
-
-        {attachmentsLoading && !uploadProgress ? (
-          <div className="flex justify-center items-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-          </div>
-        ) : attachments.length === 0 ? (
-          <div className="bg-white shadow-md rounded-md p-6 text-center text-gray-500">
-            No attachments added yet.
-          </div>
-        ) : (
-          <div className="bg-white shadow-md rounded-md overflow-hidden">
-            <ul className="divide-y divide-gray-200">
-              {attachments.map((attachment) => (
-                <li key={attachment._id} className="p-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <svg className="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {attachment.originalname}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {attachment.mimetype} · {formatDate(attachment.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <a
-                      href={attachment.path}
-                      download
-                      className="text-indigo-600 hover:text-indigo-900"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                    </a>
-                    <button
-                      onClick={() => handleDeleteAttachment(attachment._id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/* Comments Section */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Comments</h2>
-          <button
-            onClick={() => setShowCommentForm(!showCommentForm)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            {showCommentForm ? 'Cancel' : 'Add Comment'}
-          </button>
-        </div>
-
-        {showCommentForm && (
-          <div className="bg-white shadow-md rounded-md p-6 mb-4">
-            <form onSubmit={handleCommentSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="comment">
-                  Your Comment
-                </label>
-                <textarea
-                  id="comment"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  rows="3"
-                  required
-                ></textarea>
+      {/* Task Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left column - Task details */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Description */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Description</h2>
+            {editMode ? (
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows="5"
+                className="w-full border rounded-md p-2"
+              ></textarea>
+            ) : (
+              <div className="prose max-w-none">
+                {currentTask.description ? (
+                  <p className="text-gray-700">{currentTask.description}</p>
+                ) : (
+                  <p className="text-gray-500 italic">No description provided</p>
+                )}
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  disabled={commentsLoading}
-                >
-                  {commentsLoading ? 'Posting...' : 'Post Comment'}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        )}
 
-        {commentsLoading ? (
-          <div className="flex justify-center items-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-          </div>
-        ) : comments.length === 0 ? (
-          <div className="bg-white shadow-md rounded-md p-6 text-center text-gray-500">
-            No comments yet. Be the first to add one!
-          </div>
-        ) : (
-          <div className="bg-white shadow-md rounded-md overflow-hidden">
-            <ul className="divide-y divide-gray-200">
-              {comments.map((comment) => (
-                <li key={comment._id} className="p-4">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-indigo-200 flex items-center justify-center">
-                        <span className="text-indigo-600 font-bold">
-                          {comment.user?.name ? comment.user.name[0] : 'U'}
+          {/* Subtasks */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Subtasks</h2>
+            
+            {/* Subtask list */}
+            {subtasks && subtasks.length > 0 ? (
+              <div className="space-y-3 mb-4">
+                {subtasks.map((subtask) => (
+                  <div key={subtask._id} className="flex items-center p-3 border rounded-md">
+                    <div className="flex-1">
+                      <a 
+                        href={`/tasks/${subtask._id}`}
+                        className="text-sm font-medium text-gray-900 hover:text-indigo-600"
+                      >
+                        {subtask.title}
+                      </a>
+                      <div className="flex space-x-2 mt-1">
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          subtask.status === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : subtask.status === 'in-progress'
+                            ? 'bg-indigo-100 text-indigo-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {subtask.status ? subtask.status.charAt(0).toUpperCase() + subtask.status.slice(1) : 'No status'}
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          subtask.priority === 'high' 
+                            ? 'bg-red-100 text-red-800' 
+                            : subtask.priority === 'medium'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {subtask.priority ? subtask.priority.charAt(0).toUpperCase() + subtask.priority.slice(1) : 'No priority'}
                         </span>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-bold">{comment.user?.name || 'Unknown user'}</h4>
-                        <p className="text-xs text-gray-500">{formatDate(comment.createdAt)} at {formatTime(comment.createdAt)}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 mb-4">No subtasks yet</p>
+            )}
+
+            {/* Add subtask form */}
+            <form onSubmit={handleAddSubtask} className="border-t pt-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Add Subtask</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Subtask title"
+                  value={newSubtask.title}
+                  onChange={(e) => setNewSubtask({...newSubtask, title: e.target.value})}
+                  className="w-full border rounded-md p-2 text-sm"
+                  required
+                />
+                <textarea
+                  placeholder="Description (optional)"
+                  value={newSubtask.description}
+                  onChange={(e) => setNewSubtask({...newSubtask, description: e.target.value})}
+                  className="w-full border rounded-md p-2 text-sm"
+                  rows="2"
+                ></textarea>
+                <div className="flex space-x-2">
+                  <select
+                    value={newSubtask.priority}
+                    onChange={(e) => setNewSubtask({...newSubtask, priority: e.target.value})}
+                    className="border rounded-md p-2 text-sm"
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                  </select>
+                  <button
+                    type="submit"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Comments */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Comments</h2>
+            
+            {/* Comment list */}
+            {commentsLoading ? (
+              <div className="flex justify-center items-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : comments && comments.length > 0 ? (
+              <div className="space-y-4 mb-6">
+                {comments.map((comment) => (
+                  <div key={comment._id} className="border-l-2 border-indigo-200 pl-4">
+                    <div className="flex items-start">
+                      <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-sm mr-3 overflow-hidden">
+                        {comment.user?.avatar ? (
+                          <img 
+                            src={comment.user.avatar} 
+                            alt={comment.user.name} 
+                            className="h-8 w-8 rounded-full object-cover" 
+                          />
+                        ) : (
+                          (comment.user?.name || 'U').substring(0, 1)
+                        )}
                       </div>
-                      <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
+                      <div className="flex-1">
+                        <div className="flex justify-between">
+                          <h4 className="text-sm font-medium">{comment.user?.name}</h4>
+                          <span className="text-xs text-gray-500">
+                            {formatDate(comment.createdAt)}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-sm text-gray-700">
+                          {comment.content}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 mb-6">No comments yet</p>
+            )}
+
+            {/* Add comment form */}
+            <form onSubmit={handleAddComment} className="border-t pt-4">
+              <textarea
+                placeholder="Add a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="w-full border rounded-md p-2 text-sm"
+                rows="3"
+                required
+              ></textarea>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="submit"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
+                >
+                  Comment
+                </button>
+              </div>
+            </form>
           </div>
-        )}
+
+          {/* Attachments */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Attachments</h2>
+            
+            {/* Attachment list */}
+            {attachmentsLoading ? (
+              <div className="flex justify-center items-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : attachments && attachments.length > 0 ? (
+              <div className="space-y-3 mb-6">
+                {attachments.map((attachment) => (
+                  <div key={attachment._id} className="flex items-center justify-between p-3 border rounded-md">
+                    <div className="flex items-center">
+                      <svg className="h-5 w-5 text-gray-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{attachment.filename}</p>
+                        <p className="text-xs text-gray-500">
+                          {(attachment.fileSize / 1024).toFixed(2)} KB • Added {new Date(attachment.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <a href={attachment.filepath} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-900">
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </a>
+                      <button onClick={() => deleteAttachment(attachment._id)} className="text-red-600 hover:text-red-900">
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 mb-6">No attachments yet</p>
+            )}
+
+            {/* Upload attachment form */}
+            <form onSubmit={handleFileUpload} className="border-t pt-4">
+              <div className="flex flex-col space-y-2">
+                <input
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="text-sm"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
+                >
+                  Upload
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Right column - Task metadata & actions */}
+        <div className="space-y-6">
+          {/* Task details/metadata */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Details</h2>
+
+            <div className="space-y-4">
+              {/* Status */}
+              <div>
+                <h3 className="text-sm text-gray-500 mb-1">Status</h3>
+                {editMode ? (
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full border rounded-md p-2 text-sm"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                ) : (
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm ${
+                    currentTask.status === 'completed' 
+                      ? 'bg-green-100 text-green-800' 
+                      : currentTask.status === 'in-progress'
+                      ? 'bg-indigo-100 text-indigo-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {currentTask.status ? currentTask.status.charAt(0).toUpperCase() + currentTask.status.slice(1) : 'No status'}
+                  </div>
+                )}
+              </div>
+
+              {/* Priority */}
+              <div>
+                <h3 className="text-sm text-gray-500 mb-1">Priority</h3>
+                {editMode ? (
+                  <select
+                    name="priority"
+                    value={formData.priority}
+                    onChange={handleChange}
+                    className="w-full border rounded-md p-2 text-sm"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                ) : (
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm ${
+                    currentTask.priority === 'high' 
+                      ? 'bg-red-100 text-red-800' 
+                      : currentTask.priority === 'medium'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {currentTask.priority ? currentTask.priority.charAt(0).toUpperCase() + currentTask.priority.slice(1) : 'No priority'}
+                  </div>
+                )}
+              </div>
+
+              {/* Deadline */}
+              <div>
+                <h3 className="text-sm text-gray-500 mb-1">Deadline</h3>
+                {editMode ? (
+                  <input
+                    type="date"
+                    name="deadline"
+                    value={formData.deadline}
+                    onChange={handleChange}
+                    className="w-full border rounded-md p-2 text-sm"
+                  />
+                ) : (
+                  <div className={`text-sm ${isOverdue() ? 'text-red-600 font-medium' : 'text-gray-700'}`}>
+                    {currentTask.deadline ? new Date(currentTask.deadline).toLocaleDateString() : 'No deadline'}
+                  </div>
+                )}
+              </div>
+
+              {/* Assignee */}
+              <div>
+                <h3 className="text-sm text-gray-500 mb-1">Assigned To</h3>
+                {editMode ? (
+                  <select
+                    name="assignedTo"
+                    value={formData.assignedTo}
+                    onChange={handleChange}
+                    className="w-full border rounded-md p-2 text-sm"
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {users.map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div>
+                    {currentTask.assignedTo ? (
+                      <div className="flex items-center">
+                        <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2">
+                          {currentTask.assignedTo.avatar ? (
+                            <img 
+                              src={currentTask.assignedTo.avatar} 
+                              alt={currentTask.assignedTo.name} 
+                              className="h-6 w-6 rounded-full" 
+                            />
+                          ) : (
+                            currentTask.assignedTo.name?.substring(0, 1)
+                          )}
+                        </div>
+                        <span className="text-sm text-gray-700">{currentTask.assignedTo.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">Unassigned</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Created by */}
+              {currentTask.createdBy && (
+                <div>
+                  <h3 className="text-sm text-gray-500 mb-1">Created By</h3>
+                  <div className="flex items-center">
+                    <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2">
+                      {currentTask.createdBy.avatar ? (
+                        <img 
+                          src={currentTask.createdBy.avatar} 
+                          alt={currentTask.createdBy.name} 
+                          className="h-6 w-6 rounded-full" 
+                        />
+                      ) : (
+                        currentTask.createdBy.name?.substring(0, 1)
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-700">{currentTask.createdBy.name}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Created / Updated dates */}
+              <div className="text-xs text-gray-500">
+                <p>Created {new Date(currentTask.createdAt).toLocaleString()}</p>
+                {currentTask.updatedAt && currentTask.updatedAt !== currentTask.createdAt && (
+                  <p>Updated {new Date(currentTask.updatedAt).toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Time tracking */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Time Tracking</h2>
+
+            {/* Time logs */}
+            {timelogsLoading ? (
+              <div className="flex justify-center items-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : (
+              <>
+                {/* Total time spent */}
+                <div className="mb-4">
+                  <h3 className="text-sm text-gray-500 mb-1">Total Time Spent</h3>
+                  <div className="text-2xl font-semibold">
+                    {timelogs && timelogs.totalTime ? (
+                      `${Math.floor(timelogs.totalTime / 60)}h ${timelogs.totalTime % 60}m`
+                    ) : (
+                      '0h 0m'
+                    )}
+                  </div>
+                </div>
+
+                {/* Time log entries */}
+                {timelogs && timelogs.logs && timelogs.logs.length > 0 ? (
+                  <div className="space-y-3 mb-4">
+                    {timelogs.logs.slice(0, 3).map(log => (
+                      <div key={log._id} className="border-l-2 border-indigo-300 pl-3">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">
+                            {Math.floor(log.timeSpent / 60)}h {log.timeSpent % 60}m
+                          </span>
+                          <button onClick={() => deleteTimelog(log._id)} className="text-red-600 hover:text-red-900">
+                            <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500">{log.description || 'No description'}</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(log.startTime || log.date || log.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+
+                    {timelogs.logs.length > 3 && (
+                      <div className="text-center">
+                        <button className="text-xs text-indigo-600 hover:text-indigo-900">
+                          Show all {timelogs.logs.length} entries
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 mb-4">No time logs recorded</p>
+                )}
+
+                {/* Add time log form */}
+                <form onSubmit={handleAddTimeLog} className="border-t pt-4 space-y-3">
+                  <div>
+                    <label htmlFor="timeSpent" className="block text-sm text-gray-700 mb-1">
+                      Time Spent (minutes)
+                    </label>
+                    <input
+                      id="timeSpent"
+                      type="number"
+                      min="1"
+                      value={newTimeLog.timeSpent}
+                      onChange={(e) => setNewTimeLog({...newTimeLog, timeSpent: e.target.value})}
+                      className="w-full border rounded-md p-2 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="description" className="block text-sm text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <input
+                      id="description"
+                      type="text"
+                      value={newTimeLog.description}
+                      onChange={(e) => setNewTimeLog({...newTimeLog, description: e.target.value})}
+                      className="w-full border rounded-md p-2 text-sm"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
+                  >
+                    Log Time
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+
+          {/* Watchers */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Watchers</h2>
+            {currentTask.watchers && currentTask.watchers.length > 0 ? (
+              <div className="space-y-3">
+                {currentTask.watchers.map(watcher => (
+                  <div key={watcher._id} className="flex items-center">
+                    <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2 overflow-hidden">
+                      {watcher.avatar ? (
+                        <img 
+                          src={watcher.avatar} 
+                          alt={watcher.name} 
+                          className="h-6 w-6 rounded-full object-cover" 
+                        />
+                      ) : (
+                        watcher.name?.substring(0, 1)
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-700">{watcher.name}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No watchers</p>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showConfirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Task</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this task? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmDelete(false)}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

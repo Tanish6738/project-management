@@ -3,11 +3,24 @@ import User from "../models/User.modal.js";
 // Auth Controller Functions
 export const register = async (req, res) => {
     try {
-        // Validation is already done by middleware
         const user = new User(req.body);
         await user.save();
         const token = await user.generateAuthToken();
-        res.status(201).json({ user, token });
+        // Format user response as in Postman contract
+        const userObj = user.toObject();
+        delete userObj.password;
+        delete userObj.tokens;
+        res.status(201).json({
+            user: {
+                _id: userObj._id,
+                name: userObj.name,
+                email: userObj.email,
+                role: userObj.role || 'user',
+                createdAt: userObj.createdAt,
+                updatedAt: userObj.updatedAt
+            },
+            token
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -21,7 +34,20 @@ export const login = async (req, res) => {
             return res.status(401).json({ error: 'Invalid login credentials' });
         }
         const token = await user.generateAuthToken();
-        res.json({ user, token });
+        const userObj = user.toObject();
+        delete userObj.password;
+        delete userObj.tokens;
+        res.json({
+            user: {
+                _id: userObj._id,
+                name: userObj.name,
+                email: userObj.email,
+                role: userObj.role || 'user',
+                createdAt: userObj.createdAt,
+                updatedAt: userObj.updatedAt
+            },
+            token
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -67,7 +93,19 @@ export const refreshToken = async (req, res) => {
 
 // User Controller Functions
 export const getProfile = async (req, res) => {
-    res.json(req.user);
+    // Format profile as in Postman contract
+    const userObj = req.user.toObject();
+    delete userObj.password;
+    delete userObj.tokens;
+    res.json({
+        _id: userObj._id,
+        name: userObj.name,
+        email: userObj.email,
+        role: userObj.role || 'user',
+        createdAt: userObj.createdAt,
+        updatedAt: userObj.updatedAt,
+        preferences: userObj.preferences
+    });
 };
 
 export const updateProfile = async (req, res) => {
@@ -76,7 +114,20 @@ export const updateProfile = async (req, res) => {
         const updates = Object.keys(req.body);
         updates.forEach(update => req.user[update] = req.body[update]);
         await req.user.save();
-        res.json(req.user);
+        // Format response as in Postman contract
+        const userObj = req.user.toObject();
+        delete userObj.password;
+        delete userObj.tokens;
+        res.json({
+            _id: userObj._id,
+            name: userObj.name,
+            email: userObj.email,
+            bio: userObj.bio,
+            location: userObj.location,
+            role: userObj.role || 'user',
+            createdAt: userObj.createdAt,
+            updatedAt: userObj.updatedAt
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -96,7 +147,7 @@ export const getAllUsers = async (req, res) => {
         const users = await User.find({});
         res.json(users);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status500.json({ error: error.message });
     }
 };
 
@@ -353,6 +404,28 @@ export const setWorkHours = async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+};
+
+export const searchUsers = async (req, res) => {
+    try {
+        const { query } = req.query;
+        
+        if (!query || query.trim() === '') {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+        
+        // Search users by name or email
+        const users = await User.find({
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { email: { $regex: query, $options: 'i' } }
+            ]
+        }).select('name email avatar');
+        
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };
 

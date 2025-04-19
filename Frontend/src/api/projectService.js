@@ -10,10 +10,18 @@ const projectService = {
   
   // Project team management
   getProjectMembers: (projectId) => apiClient.get(`/projects/${projectId}/members`),
-  addProjectMember: (projectId, userData) => apiClient.post(`/projects/${projectId}/members`, userData),
+  addProjectMember: (projectId, memberData) => apiClient.post(`/projects/${projectId}/members`, memberData),
   removeProjectMember: (projectId, userId) => apiClient.delete(`/projects/${projectId}/members/${userId}`),
   updateMemberRole: (projectId, userId, roleData) => 
     apiClient.patch(`/projects/${projectId}/members/${userId}/role`, roleData),
+  updateMemberPermissions: (projectId, userId, permissionsData) =>
+    apiClient.patch(`/projects/${projectId}/members/${userId}/permissions`, permissionsData),
+  
+  // Team associations
+  addTeamToProject: (projectId, teamId) => apiClient.post(`/projects/${projectId}/team`, { teamId }),
+  removeTeamFromProject: (projectId, teamId) => apiClient.delete(`/projects/${projectId}/team/${teamId}`),
+  
+  // Project invitations
   getProjectInvitations: (projectId) => apiClient.get(`/projects/${projectId}/invitations`),
   sendProjectInvitation: (projectId, inviteData) => apiClient.post(`/projects/${projectId}/invitations`, inviteData),
   cancelProjectInvitation: (projectId, invitationId) => apiClient.delete(`/projects/${projectId}/invitations/${invitationId}`),
@@ -23,8 +31,8 @@ const projectService = {
     apiClient.put(`/projects/${projectId}/settings`, settings),
   updateProjectWorkflow: (projectId, workflow) => 
     apiClient.put(`/projects/${projectId}/workflow`, workflow),
-  manageProjectTags: (projectId, tags) => 
-    apiClient.post(`/projects/${projectId}/tags`, tags),
+  manageProjectTags: (projectId, tagsData) => 
+    apiClient.post(`/projects/${projectId}/tags`, tagsData),
   getProjectTags: (projectId) => apiClient.get(`/projects/${projectId}/tags`),
   
   // Project templates
