@@ -742,3 +742,229 @@ export const getUserTasks = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getTeamTaskStats = async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        
+        if (!mongoose.Types.ObjectId.isValid(teamId)) {
+            return res.status(400).json({ error: 'Invalid team ID format' });
+        }
+
+        // Get all tasks associated with the team members
+        const teamTasks = await Task.aggregate([
+            {
+                $lookup: {
+                    from: 'teams',
+                    localField: 'assignedTo',
+                    foreignField: 'members.user',
+                    as: 'teamMatch'
+                }
+            },
+            {
+                $match: {
+                    'teamMatch._id': new mongoose.Types.ObjectId(teamId)
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'assignedTo',
+                    foreignField: '_id',
+                    as: 'assignee'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$assignee',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $group: {
+                    _id: '$assignedTo',
+                    assigneeName: { $first: '$assignee.name' },
+                    assigneeEmail: { $first: '$assignee.email' },
+                    assigneeAvatar: { $first: '$assignee.avatar' },
+                    totalTasks: { $sum: 1 },
+                    completedTasks: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'completed'] }, 1, 0]
+                        }
+                    },
+                    inProgressTasks: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'in-progress'] }, 1, 0]
+                        }
+                    },
+                    pendingTasks: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'pending'] }, 1, 0]
+                        }
+                    },
+                    lateTasks: {
+                        $sum: {
+                            $cond: [
+                                { $and: [
+                                    { $lt: ['$deadline', new Date()] },
+                                    { $ne: ['$status', 'completed'] }
+                                ]}, 
+                                1, 
+                                0
+                            ]
+                        }
+                    },
+                    highPriorityTasks: {
+                        $sum: {
+                            $cond: [{ $eq: ['$priority', 'high'] }, 1, 0]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        // Calculate team-wide stats
+        const teamStats = {
+            totalTasks: 0,
+            completedTasks: 0,
+            inProgressTasks: 0,
+            pendingTasks: 0,
+            lateTasks: 0,
+            highPriorityTasks: 0,
+            memberStats: teamTasks
+        };
+
+        teamTasks.forEach(memberStat => {
+            teamStats.totalTasks += memberStat.totalTasks;
+            teamStats.completedTasks += memberStat.completedTasks;
+            teamStats.inProgressTasks += memberStat.inProgressTasks;
+            teamStats.pendingTasks += memberStat.pendingTasks;
+            teamStats.lateTasks += memberStat.lateTasks;
+            teamStats.highPriorityTasks += memberStat.highPriorityTasks;
+        });
+
+        // Calculate completion rate
+        teamStats.completionRate = teamStats.totalTasks > 0 
+            ? (teamStats.completedTasks / teamStats.totalTasks) * 100 
+            : 0;
+
+        res.json(teamStats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getTaskAuditLog = async (req, res) => {
+    try {
+        const { taskId } = req.params;
+        
+        if (!mongoose.Types.ObjectId.isValid(taskId)) {
+            return res.status(400).json({ error: 'Invalid task ID format' });
+        }
+
+        const task = await Task.findById(taskId);
+        if (!task) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        // Check if user has access to this task
+        const project = await Project.findById(task.project);
+        if (!project) {
+            return res.status(404).json({ error: 'Associated project not found' });
+        }
+
+        const isMember = project.members.some(member => 
+            member.user.equals(req.user._id)
+        );
+
+        if (!isMember && !project.owner.equals(req.user._id) && !task.assignedTo?.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Not authorized to view task audit log' });
+        }
+
+        // Get audit logs for this task
+        const AuditLog = mongoose.model('AuditLog');
+        const logs = await AuditLog.find({ 
+            targetModel: 'Task',
+            targetId: taskId 
+        })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .populate('user', 'name email avatar');
+
+        res.json({
+            activities: logs,
+            task: {
+                _id: task._id,
+                title: task.title
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching task audit log:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getAllTaskActivities = async (req, res) => {
+    try {
+        // Find all tasks accessible to this user
+        const projects = await Project.find({
+            $or: [
+                { owner: req.user._id },
+                { 'members.user': req.user._id }
+            ]
+        }).select('_id');
+        
+        const projectIds = projects.map(p => p._id);
+        
+        // Get audit logs for tasks in these projects
+        const AuditLog = mongoose.model('AuditLog');
+        const logs = await AuditLog.find({ 
+            targetModel: 'Task',
+            // Only include logs for tasks in projects the user has access to
+            $or: [
+                { 'details.projectId': { $in: projectIds } },
+                { 'user': req.user._id } // Include all logs created by the user
+            ]
+        })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .populate('user', 'name email avatar');
+        
+        // Get task information for each log entry
+        const taskIds = [...new Set(logs.map(log => log.targetId))];
+        const tasks = await Task.find({ 
+            _id: { $in: taskIds }
+        }).select('title');
+        
+        const taskMap = {};
+        tasks.forEach(task => {
+            taskMap[task._id.toString()] = {
+                _id: task._id,
+                title: task.title
+            };
+        });
+        
+        // Format the response
+        const activities = logs.map(log => ({
+            _id: log._id,
+            action: log.action,
+            timestamp: log.createdAt,
+            user: log.user ? {
+                _id: log.user._id,
+                name: log.user.name,
+                email: log.user.email,
+                avatar: log.user.avatar || null
+            } : null,
+            task: taskMap[log.targetId.toString()] || { _id: log.targetId, title: 'Unknown Task' },
+            details: log.details || {}
+        }));
+
+        res.json({
+            activities,
+            count: activities.length
+        });
+    } catch (error) {
+        console.error('Error fetching all task activities:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

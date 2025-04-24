@@ -22,7 +22,10 @@ import {
     updateNotificationSettings,
     getWorkHours,
     setWorkHours,
-    searchUsers
+    searchUsers,
+    getNotifications,
+    markNotificationRead,
+    markAllNotificationsRead
 } from '../controllers/user.controller.js';
 
 const UserRouter = express.Router();
@@ -48,6 +51,11 @@ UserRouter.put('/time-settings', auth, updateTimeSettings);
 // Notification settings routes
 UserRouter.get('/notifications/settings', auth, getNotificationSettings);
 UserRouter.put('/notifications/settings', auth, updateNotificationSettings);
+
+// User notifications routes
+UserRouter.get('/notifications', auth, getNotifications);
+UserRouter.put('/notifications/:notificationId/read', auth, markNotificationRead);
+UserRouter.put('/notifications/read-all', auth, markAllNotificationsRead);
 
 // Work hours routes
 UserRouter.get('/work-hours', auth, getWorkHours);

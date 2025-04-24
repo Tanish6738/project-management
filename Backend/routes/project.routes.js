@@ -23,7 +23,8 @@ import {
     updateProjectSettings,
     updateProjectWorkflow,
     manageProjectTags,
-    getProjectStats
+    getProjectStats,
+    getProjectActivity
 } from '../controllers/project.controller.js';
 
 const ProjectRouter = express.Router();
@@ -48,5 +49,6 @@ ProjectRouter.post('/:projectId/tags', auth, projectAuth('editor'), validateProj
 
 // Project statistics and analytics routes
 ProjectRouter.get('/:projectId/stats', auth, getProjectStats);
+ProjectRouter.get('/:projectId/activity', auth, getProjectActivity);
 
 export default ProjectRouter;

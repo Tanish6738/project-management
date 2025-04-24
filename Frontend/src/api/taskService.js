@@ -59,6 +59,7 @@ const taskService = {
   getTaskMetrics: (taskId) => apiClient.get(`/tasks/${taskId}/metrics`),
   getTaskHistory: (taskId) => apiClient.get(`/tasks/${taskId}/history`),
   getTaskAuditLog: (taskId) => apiClient.get(`/tasks/${taskId}/audit-log`),
+  getAllTaskActivities: () => apiClient.get('/tasks/activities'),
   
   // Subtasks
   createSubtask: (parentTaskId, subtaskData) => apiClient.post(`/tasks/${parentTaskId}/subtasks`, subtaskData),

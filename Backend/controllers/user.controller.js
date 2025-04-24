@@ -429,3 +429,64 @@ export const searchUsers = async (req, res) => {
     }
 };
 
+// Notifications controller functions
+export const getNotifications = async (req, res) => {
+    try {
+        // Check if the user has notifications field
+        if (!req.user.notifications) {
+            req.user.notifications = [];
+        }
+
+        // Sort notifications by date (newest first)
+        const sortedNotifications = [...req.user.notifications].sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        
+        res.json({
+            notifications: sortedNotifications,
+            unreadCount: sortedNotifications.filter(n => !n.read).length
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const markNotificationRead = async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        
+        const notification = req.user.notifications.id(notificationId);
+        if (!notification) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+        
+        notification.read = true;
+        await req.user.save();
+        
+        res.json({
+            message: 'Notification marked as read',
+            notification
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const markAllNotificationsRead = async (req, res) => {
+    try {
+        if (req.user.notifications && req.user.notifications.length > 0) {
+            req.user.notifications.forEach(notification => {
+                notification.read = true;
+            });
+            
+            await req.user.save();
+        }
+        
+        res.json({
+            message: 'All notifications marked as read'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+

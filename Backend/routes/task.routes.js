@@ -27,7 +27,10 @@ import {
     getTaskTreeView,
     getTasksByStatus,
     getProjectTasksDetails,
-    getUserTasks
+    getUserTasks,
+    getTeamTaskStats,
+    getTaskAuditLog,
+    getAllTaskActivities
 } from '../controllers/task.controller.js';
 
 const TaskRouter = express.Router();
@@ -39,6 +42,12 @@ TaskRouter.get('/', auth, validateTaskFilters, getAllTasks);
 // User-specific tasks
 TaskRouter.get('/assigned-to-me', auth, getUserTasks);
 
+// Team-specific tasks
+TaskRouter.get('/team-stats/:teamId', auth, getTeamTaskStats);
+
+// Task activities (must be before /:taskId routes to avoid conflict)
+TaskRouter.get('/activities', auth, getAllTaskActivities);
+
 // Advanced task views
 TaskRouter.get('/tree', auth, getTaskTreeView);
 TaskRouter.get('/by-status', auth, getTasksByStatus);
@@ -47,6 +56,7 @@ TaskRouter.get('/by-status', auth, getTasksByStatus);
 TaskRouter.get('/:taskId', auth, getTaskDetails);
 TaskRouter.put('/:taskId', auth, validateTaskUpdate, validate, updateTask);
 TaskRouter.delete('/:taskId', auth, deleteTask);
+TaskRouter.get('/:taskId/audit-log', auth, getTaskAuditLog);
 
 // Project-specific task operations
 TaskRouter.get('/project/:projectId', auth, getTasksByProject);

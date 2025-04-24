@@ -11,16 +11,20 @@ const NotificationsWidget = () => {
     const loadNotifications = async () => {
       try {
         setLoading(true);
-        const userNotifications = await fetchUserNotifications();
+        const response = await fetchUserNotifications();
         
-        if (userNotifications) {
+        if (response && response.notifications) {
+          // Response contains a notifications array
+          const notificationsArray = response.notifications;
+          
           // Sort by date (newest first)
-          userNotifications.sort((a, b) => 
+          notificationsArray.sort((a, b) => 
             new Date(b.createdAt) - new Date(a.createdAt)
           );
           
-          setNotifications(userNotifications);
+          setNotifications(notificationsArray);
         } else {
+          // Handle case where response structure is different
           setNotifications([]);
         }
         

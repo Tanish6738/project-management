@@ -544,3 +544,57 @@ export const getProjectStats = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getProjectActivity = async (req, res) => {
+    try {
+        const projectId = req.params.projectId;
+        
+        // Check if project exists and user has access
+        const project = await Project.findById(projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Verify user has access to this project
+        const isMember = project.members.some(member => 
+            member.user.equals(req.user._id)
+        );
+
+        if (!isMember && !project.owner.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Not authorized to view project activities' });
+        }
+
+        // Get audit logs related to this project
+        const AuditLog = mongoose.model('AuditLog');
+        const activities = await AuditLog.find({ 
+            'entityInfo.projectId': projectId 
+        })
+        .sort({ createdAt: -1 }) // Most recent first
+        .limit(50)  // Limit to 50 most recent activities
+        .populate('user', 'name email avatar');
+
+        // Format response
+        const formattedActivities = activities.map(activity => ({
+            _id: activity._id,
+            type: activity.actionType,
+            description: activity.description,
+            entityType: activity.entityType,
+            entityId: activity.entityId,
+            user: activity.user ? {
+                _id: activity.user._id,
+                name: activity.user.name,
+                email: activity.user.email,
+                avatar: activity.user.avatar || null
+            } : null,
+            createdAt: activity.createdAt
+        }));
+
+        res.json({
+            activities: formattedActivities,
+            totalCount: formattedActivities.length
+        });
+    } catch (error) {
+        console.error('Error getting project activities:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

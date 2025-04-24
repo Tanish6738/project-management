@@ -291,6 +291,20 @@ export const TaskProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchTaskActivities = useCallback(async () => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await taskService.getAllTaskActivities();
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response.data.activities;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      toast.error('Error fetching task activities: ' + errorMessage);
+      throw error;
+    }
+  }, []);
+
   return (
     <TaskContext.Provider
       value={{
@@ -309,7 +323,8 @@ export const TaskProvider = ({ children }) => {
         getTasksByStatus,
         getTasksByAssignee,
         getTaskKanbanView,
-        getTeamTaskStats
+        getTeamTaskStats,
+        fetchTaskActivities
       }}
     >
       {children}

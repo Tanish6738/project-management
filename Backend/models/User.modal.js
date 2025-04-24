@@ -93,6 +93,44 @@ const UserSchema = new Schema({
     }
   }],
 
+  // Notifications
+  notifications: [{
+    type: {
+      type: String,
+      enum: ['task_assigned', 'task_updated', 'task_completed', 'comment_added', 'project_created', 'team_update', 'mention', 'reminder', 'system'],
+      required: true
+    },
+    title: {
+      type: String,
+      required: true
+    },
+    message: {
+      type: String,
+      required: true
+    },
+    linkTo: String,
+    read: {
+      type: Boolean,
+      default: false
+    },
+    entityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'notifications.entityType'
+    },
+    entityType: {
+      type: String,
+      enum: ['Task', 'Project', 'Team', 'Comment', 'User']
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    actionBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
+
   // Preferences
   preferences: {
     notifications: {
