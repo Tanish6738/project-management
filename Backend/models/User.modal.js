@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
+// Updated User schema for multi-tenancy and RBAC
 const UserSchema = new Schema({
   // Basic Info
   name: {
@@ -35,11 +36,17 @@ const UserSchema = new Schema({
   timezone: String,
 
   // Role & Permissions
-  role: {
-    type: String,
-    enum: ['admin', 'manager', 'member', 'viewer'],
-    default: 'member'
-  },
+  roles: [{
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization'
+    },
+    roleName: {
+      type: String,
+      enum: ['admin', 'manager', 'member', 'viewer'],
+      default: 'member'
+    }
+  }],
   permissions: [{
     type: String,
     enum: ['create_project', 'delete_project', 'invite_users', 'manage_users', 'view_reports']
@@ -216,6 +223,7 @@ const UserSchema = new Schema({
     default: 'active'
   },
   lastActive: Date,
+  lastLogin: Date,
   
   // Audit
   loginHistory: [{
@@ -248,6 +256,8 @@ const UserSchema = new Schema({
 UserSchema.index({ 'tokens.token': 1 });
 UserSchema.index({ 'projectInvites.status': 1 });
 UserSchema.index({ 'teamInvites.status': 1 });
+UserSchema.index({ 'roles.organizationId': 1 });
+UserSchema.index({ 'roles.roleName': 1 });
 
 // Pre-save middleware to hash password
 UserSchema.pre('save', async function(next) {

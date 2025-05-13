@@ -139,26 +139,30 @@ For complete testing instructions, refer to:
 ### User Management
 - **User Registration & Authentication**: Secure signup and login with JWT tokens
 - **User Profiles**: Customizable user profiles with avatars, bios, and contact information
-- **Role-Based Access Control**: Different permissions for admins, managers, and regular users
+- **Role-Based Access Control**: Fine-grained permissions for admins, managers, and users
 - **User Preferences**: Personalized settings for notifications, themes, and language
-- **Time Zone Settings**: Configure working hours and time zone for accurate reporting
+- **Time Zone & Working Hours**: Configure working hours and time zone for accurate reporting
 - **Invitation System**: Send and manage invitations to join projects or teams
+- **Account Deletion**: Users can delete their own accounts securely
 
 ### Team Management
 - **Team Creation & Organization**: Create departments or project-based teams
-- **Team Member Management**: Add, remove, and assign roles to team members
-- **Team Statistics**: Track team performance and productivity metrics
-- **Permission Management**: Configure granular permissions for team members
+- **Team Member Management**: Add, remove, and assign roles and permissions to team members
+- **Team Statistics & Metrics**: Track team performance, productivity, and task statistics
+- **Permission Management**: Granular permissions for team members (add/remove projects, view all projects, etc.)
 - **Team Projects**: Manage multiple projects within a team
+- **Team Activity Logs**: Audit and review team-related actions
 
 ### Project Management
 - **Project Creation**: Create personal or team-based projects
-- **Project Workflows**: Customizable project workflows with up to 10 stages
-- **Project Settings**: Configure visibility, notifications, and access permissions
+- **Project Workflows**: Customizable workflows with up to 10 stages
+- **Project Settings**: Configure visibility, notifications, guest access, and access permissions
 - **Tags & Categorization**: Organize projects with tags and categories
-- **Project Analytics**: Track project progress, completion rates, and team workload
+- **Project Analytics & Metrics**: Track project progress, completion rates, workload, and activity
 - **Project Templates**: Save and reuse project configurations
 - **Project Archiving**: Archive completed projects while preserving data
+- **Project Member Roles**: Assign roles and permissions to project members
+- **Project Notifications**: Receive updates on important project changes
 
 ### Task Management
 - **Task Creation & Assignment**: Create tasks and assign them to team members
@@ -168,13 +172,16 @@ For complete testing instructions, refer to:
 - **Deadlines & Reminders**: Set due dates and receive reminders
 - **Task Status Tracking**: Monitor progress through customizable status workflows
 - **Task Watchers**: Subscribe to task updates without being assigned
-- **Advanced Task Views**: Tree view, kanban boards, and status-based grouping
+- **Advanced Task Views**: Tree view, kanban boards, status-based grouping, and detailed statistics
+- **Task Notifications**: Get notified about updates, comments, and status changes
+- **Task Metrics**: Track time spent, progress, and completion rates
 
 ### Comments & Collaboration
 - **Task Comments**: Discuss work directly on task pages
-- **Comment Threads**: Organize discussions with threaded replies
+- **Comment Threads & Replies**: Organize discussions with threaded replies
 - **Mentions**: Tag team members to notify them about important information
 - **Rich Text Formatting**: Format comments with markdown-style syntax
+- **Comment Notifications**: Get notified about replies and mentions
 
 ### Time Tracking
 - **Time Logging**: Record time spent on tasks manually or with timers
@@ -182,19 +189,27 @@ For complete testing instructions, refer to:
 - **Billable Hours**: Mark time as billable or non-billable
 - **Time Approvals**: Review and approve submitted time entries
 - **Export Options**: Export time data for invoicing or analysis
+- **Time Log Metrics**: Aggregate and analyze time spent across projects and users
 
 ### File Management
 - **File Attachments**: Upload files to projects and tasks
 - **File Previews**: Preview supported file types directly in the browser
 - **File Organization**: Organize attachments by project or task
 - **Secure Storage**: Safely store and manage access to uploaded files
+- **Attachment Download & Deletion**: Download or remove files as needed
 
 ### Analytics & Reporting
-- **Project Analytics**: Track project progress and completion rates
+- **Project Analytics**: Track project progress, completion rates, and activity
 - **Team Performance**: Monitor team productivity and workload
 - **Task Distribution**: Analyze task distribution by status and priority
 - **Time Reports**: Generate detailed time usage reports
 - **Custom Dashboards**: Personalized views with relevant metrics
+- **Advanced Analytics**: Visualize trends, bottlenecks, and performance over time
+
+### Notifications & Auditing
+- **Real-Time Notifications**: Receive updates for tasks, comments, and project changes
+- **Audit Logging**: Track important system changes and actions for security and compliance
+- **Notification Preferences**: Control which notifications you receive and how
 
 ### User Interface
 - **Responsive Design**: Works on desktop and mobile devices
@@ -203,12 +218,12 @@ For complete testing instructions, refer to:
 - **Dark/Light Themes**: Multiple visual themes for comfortable viewing
 - **Accessibility Features**: Designed for keyboard navigation and screen readers
 
-### Security & Auditing
+### Security & Data Integrity
 - **Secure Authentication**: JWT-based authentication with token refresh
 - **Role-Based Access**: Control permissions based on user roles
-- **Audit Logging**: Track important system changes and actions
 - **Data Validation**: Comprehensive input validation and sanitization
 - **Password Security**: Secure password hashing and account recovery
+- **Audit Logging**: Track all critical actions for compliance
 
 ## 🤝 Contributing
 

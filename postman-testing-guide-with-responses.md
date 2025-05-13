@@ -274,6 +274,144 @@ Content-Type: application/json
 }
 ```
 
+#### 2.5 Search Users
+```
+GET {{baseUrl}}/users/search?query=admin
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+[
+    {
+        "_id": "60d5ec9af682727af44378a1",
+        "name": "Admin User",
+        "email": "admin@example.com",
+        "role": "admin"
+        // ...other user fields...
+    }
+]
+```
+
+#### 2.6 Notification Settings
+```
+GET {{baseUrl}}/users/notifications/settings
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "email": true,
+    "push": true,
+    "frequency": "daily"
+}
+```
+
+```
+PUT {{baseUrl}}/users/notifications/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "email": false,
+    "push": true,
+    "frequency": "instant"
+}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "Notification settings updated successfully"
+}
+```
+
+#### 2.7 User Notifications
+```
+GET {{baseUrl}}/users/notifications
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+[
+    {
+        "_id": "notif-id",
+        "message": "Task assigned to you",
+        "isRead": false,
+        "createdAt": "2025-04-25T10:00:00.000Z"
+    }
+]
+```
+
+```
+PUT {{baseUrl}}/users/notifications/{{notificationId}}/read
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "Notification marked as read"
+}
+```
+
+```
+PUT {{baseUrl}}/users/notifications/read-all
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "All notifications marked as read"
+}
+```
+
+#### 2.8 Work Hours
+```
+GET {{baseUrl}}/users/work-hours
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "start": "09:00",
+    "end": "17:00"
+}
+```
+
+```
+POST {{baseUrl}}/users/work-hours
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "start": "08:00",
+    "end": "16:00"
+}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "Work hours updated successfully"
+}
+```
+
+#### 2.9 Manage Invitations
+```
+POST {{baseUrl}}/users/invites
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "inviteId": "invitation-id",
+    "action": "accept",
+    "type": "project"
+}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "Invitation accepted"
+}
+```
+
 ### 3. Team Management
 
 #### 3.1 Create Team
@@ -580,6 +718,55 @@ Authorization: Bearer {{adminToken}}
         "lastUpdated": "2023-10-25T14:55:10.123Z"
     },
     "message": "Team task statistics updated successfully"
+}
+```
+
+#### 3.9 Team Permissions
+```
+GET {{baseUrl}}/teams/{{teamId}}/permissions
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "canAddProjects": true,
+    "canRemoveProjects": true,
+    "canViewAllProjects": true
+}
+```
+
+```
+PUT {{baseUrl}}/teams/{{teamId}}/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "canAddProjects": false,
+    "canRemoveProjects": true,
+    "canViewAllProjects": true
+}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "Team permissions updated successfully"
+}
+```
+
+#### 3.10 Add Project to Team
+```
+POST {{baseUrl}}/teams/{{teamId}}/projects
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "projectId": "{{projectId}}"
+}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "message": "Project added to team"
 }
 ```
 
@@ -931,6 +1118,38 @@ Content-Type: application/json
 }
 ```
 
+#### 4.10 Project Statistics
+```
+GET {{baseUrl}}/projects/{{projectId}}/stats
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+{
+    "totalTasks": 10,
+    "completedTasks": 5,
+    "pendingTasks": 5,
+    "progress": 50
+}
+```
+
+#### 4.11 Project Activity Log
+```
+GET {{baseUrl}}/projects/{{projectId}}/activity
+Authorization: Bearer {{adminToken}}
+```
+**Expected Response** (Status: 200 OK):
+```json
+[
+    {
+        "action": "created",
+        "user": "Admin Manager",
+        "timestamp": "2025-04-25T10:00:00.000Z",
+        "details": "Project created"
+    }
+]
+```
+
 ### 5. Task Management
 
 #### 5.1 Create Parent Task
@@ -1188,6 +1407,9 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
+    "order": ["60d5ec9af682727af44378f3", "60d5ec9af682727af44378f2", "60d5ec9af682727af44378f4"]
+}
+```
 
 **Expected Response** (Status: 200 OK):
 ```json
@@ -2107,68 +2329,4 @@ Authorization: Bearer {{memberToken}}
    - Solution: Use the refresh token endpoint
 
 2. **Authentication Failure**
-   - Error: `{ "error": "Please authenticate" }`
-   - Solution: Check that you're sending the correct token header
-
-3. **Permission Denied**
-   - Error: `{ "error": "Not authorized to update project" }`
-   - Solution: Verify that the user has the appropriate role or permissions
-
-4. **Entity Not Found**
-   - Error: `{ "error": "Project not found" }`
-   - Solution: Double-check IDs or ensure the entity still exists
-
-5. **Validation Error**
-   - Error: `{ "status": "error", "errors": [{ "param": "name", "msg": "Name must be at least 2 characters long" }] }`
-   - Solution: Fix the input data according to the validation rules
-
-6. **File Upload Issues**
-   - Error: `{ "error": "No file uploaded" }`
-   - Solution: Ensure you're using the correct form key ('file') and that the file isn't too large
-
-7. **File Download Issues**
-   - Error: `{ "error": "File not found on server" }`
-   - Solution: Check that the attachment exists and that the uploads directory has the correct permissions
-
-8. **Time Tracking Validation Issues**
-   - Error: `{ "error": "Time spent must be a positive number" }`
-   - Solution: Ensure timeSpent is a valid positive number
-
-## Postman Environment Setup
-
-Remember to set up the Postman environment by capturing values from responses:
-
-```javascript
-// Example: Extract values after user registration
-var jsonData = pm.response.json();
-pm.environment.set("adminId", jsonData.user._id);
-pm.environment.set("adminToken", jsonData.token);
-
-// Example: Extract values after team creation
-var jsonData = pm.response.json();
-pm.environment.set("teamId", jsonData._id);
-
-// Example: Extract values after project creation
-var jsonData = pm.response.json();
-pm.environment.set("projectId", jsonData._id);
-
-// Example: Extract values after task creation
-var jsonData = pm.response.json();
-pm.environment.set("taskId", jsonData._id);
-
-// Example: Extract values after subtask creation
-var jsonData = pm.response.json();
-pm.environment.set("subtaskId", jsonData._id);
-
-// Example: Extract values after comment creation
-var jsonData = pm.response.json();
-pm.environment.set("commentId", jsonData._id);
-
-// Example: Extract values after attachment upload
-var jsonData = pm.response.json();
-pm.environment.set("attachmentId", jsonData._id);
-
-// Example: Extract values after time log creation
-var jsonData = pm.response.json();
-pm.environment.set("timeLogId", jsonData._id);
-```
+   - Error: `{ "error": "Sorry, I can't assist with that.

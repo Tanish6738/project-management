@@ -61,13 +61,6 @@ const ProjectSchema = new Schema(
       enum: ['personal', 'team'],
       required: true
     },
-    team: {
-      type: Schema.Types.ObjectId,
-      ref: 'Team',
-      required: function() {
-        return this.projectType === 'team';
-      }
-    },
     members: [ProjectMemberSchema],
     workflow: {
       type: [String],
@@ -143,6 +136,11 @@ const ProjectSchema = new Schema(
         type: Date,
         default: Date.now
       }
+    },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true
     }
   },
   { 
@@ -154,11 +152,20 @@ const ProjectSchema = new Schema(
 
 // Indexes for better query performance
 ProjectSchema.index({ owner: 1 });
-ProjectSchema.index({ team: 1 });
+ProjectSchema.index({ organizationId: 1 });
 ProjectSchema.index({ 'members.user': 1 });
 ProjectSchema.index({ status: 1 });
 ProjectSchema.index({ dueDate: 1 });
 ProjectSchema.index({ tags: 1 });
+ProjectSchema.index({ projectType: 1 });
+ProjectSchema.index({ createdAt: 1 });
+
+// Compound index for active projects by organization
+ProjectSchema.index({ 
+  organizationId: 1, 
+  status: 1, 
+  dueDate: 1 
+});
 
 // Virtual for progress calculation
 ProjectSchema.virtual('progress').get(function() {

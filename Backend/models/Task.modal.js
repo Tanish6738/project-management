@@ -133,7 +133,36 @@ const TaskSchema = new Schema(
         type: Date,
         default: Date.now
       }
-    }]
+    }],
+    projectId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Project',
+      required: true
+    },
+    parentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Task'
+    },
+    ancestors: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Task'
+    }],
+    assigneeId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    dependsOn: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Task'
+    }],
+    budget: {
+      type: Schema.Types.Decimal128,
+      default: 0
+    },
+    customFields: {
+      type: Map,
+      of: Schema.Types.Mixed
+    }
   },
   {
     timestamps: true,
@@ -165,6 +194,10 @@ TaskSchema.index({ project: 1 });
 TaskSchema.index({ assignedTo: 1 });
 TaskSchema.index({ status: 1 });
 TaskSchema.index({ parentTask: 1 });
+TaskSchema.index({ projectId: 1 });
+TaskSchema.index({ parentId: 1 });
+TaskSchema.index({ assigneeId: 1 });
+TaskSchema.index({ 'customFields.key': 1 });
 
 // Add methods to TaskSchema
 TaskSchema.methods = {

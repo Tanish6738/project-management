@@ -25,6 +25,11 @@ const AttachmentSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true
+    },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true
     }
   },
   { timestamps: true }
@@ -33,6 +38,9 @@ const AttachmentSchema = new Schema(
 // Add indexes for better performance
 AttachmentSchema.index({ task: 1 });
 AttachmentSchema.index({ uploadedBy: 1 });
+AttachmentSchema.index({ organizationId: 1 });
 
 const Attachment = mongoose.model('Attachment', AttachmentSchema);
 export default Attachment;
+
+// Updated Attachment schema for multi-tenancy
